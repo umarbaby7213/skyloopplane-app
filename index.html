@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Donut SMP - End Crystal PvP, Sword, Totem & Golden Apple</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Donut SMP - End Crystal PvP (Mobile & PC)</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
         #game-container { width: 100vw; height: 100vh; position: relative; }
         
@@ -27,13 +27,13 @@
         #totem-pop-overlay.active { transform: translate(-50%, -50%) scale(1.4); }
 
         /* HUD Container */
-        #hud { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 5; }
+        #hud { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 7; }
         
         /* Hearts & Food Bars Row */
-        .status-wrapper { display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px; gap: 20px; }
+        .status-wrapper { display: flex; justify-content: space-between; width: 100%; margin-bottom: 6px; gap: 10px; }
         
-        .hearts-bar, .food-bar { display: flex; gap: 2px; background: rgba(0, 0, 0, 0.6); padding: 6px 10px; border-radius: 4px; border: 2px solid #3c3c3c; }
-        .heart-wrapper, .shank-wrapper { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+        .hearts-bar, .food-bar { display: flex; gap: 2px; background: rgba(0, 0, 0, 0.6); padding: 4px 8px; border-radius: 4px; border: 2px solid #3c3c3c; }
+        .heart-wrapper, .shank-wrapper { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; }
         
         /* Pixel Art Minecraft Heart */
         .pixel-heart {
@@ -47,7 +47,7 @@
                 1px 5px 0 #000, 2px 5px 0 #e02424, 3px 5px 0 #e02424, 4px 5px 0 #e02424, 5px 5px 0 #e02424, 6px 5px 0 #9c0000, 7px 5px 0 #000,
                 2px 6px 0 #000, 3px 6px 0 #e02424, 4px 6px 0 #e02424, 5px 6px 0 #9c0000, 6px 6px 0 #000,
                 3px 7px 0 #000, 4px 7px 0 #e02424, 5px 7px 0 #000, 4px 8px 0 #000;
-            transform: scale(2); transition: opacity 0.2s;
+            transform: scale(1.6); transition: opacity 0.2s;
         }
         .pixel-heart.empty { opacity: 0.2; }
 
@@ -63,7 +63,7 @@
                 0px 5px 0 #000, 1px 5px 0 #8b3a0f, 2px 5px 0 #8b3a0f, 3px 5px 0 #000,
                 0px 6px 0 #000, 1px 6px 0 #d1a880, 2px 6px 0 #000,
                 1px 7px 0 #000, 2px 7px 0 #ffffff, 3px 7px 0 #000, 2px 8px 0 #000;
-            transform: scale(2);
+            transform: scale(1.6);
         }
 
         /* Pixel Art Golden Apple Icon */
@@ -79,23 +79,31 @@
                 1px 7px 0 #000, 2px 7px 0 #ffaa00, 3px 7px 0 #ffaa00, 4px 7px 0 #ffaa00, 5px 7px 0 #ffaa00, 6px 7px 0 #c77b00, 7px 7px 0 #000,
                 2px 8px 0 #000, 3px 8px 0 #ffaa00, 4px 8px 0 #ffaa00, 5px 8px 0 #c77b00, 6px 8px 0 #000,
                 3px 9px 0 #000, 4px 9px 0 #ffaa00, 5px 9px 0 #000, 4px 10px 0 #000;
-            transform: scale(1.8);
+            transform: scale(1.5);
         }
 
         /* Inventory & Hotbar UI */
-        #hotbar-wrapper { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        #hotbar { display: flex; background: rgba(0, 0, 0, 0.7); border: 4px solid #3c3c3c; border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        .slot { width: 52px; height: 52px; border: 3px solid #8b8b8b; background: rgba(139, 139, 139, 0.3); margin: 2px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 22px; position: relative; }
+        #hotbar-wrapper { display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: auto; }
+        #hotbar { display: flex; background: rgba(0, 0, 0, 0.7); border: 3px solid #3c3c3c; border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .slot { width: 44px; height: 44px; border: 2px solid #8b8b8b; background: rgba(139, 139, 139, 0.3); margin: 2px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 18px; position: relative; cursor: pointer; }
         .slot.active { border-color: #ffffff; background: rgba(255, 255, 255, 0.4); box-shadow: inset 0 0 8px #fff; }
-        .slot-num { position: absolute; top: 2px; left: 4px; font-size: 10px; color: #aaa; font-weight: bold; }
-        .count-badge { position: absolute; bottom: 2px; right: 4px; font-size: 11px; color: #fff; font-weight: bold; text-shadow: 1px 1px #000; }
+        .slot-num { position: absolute; top: 1px; left: 3px; font-size: 9px; color: #aaa; font-weight: bold; }
+        .count-badge { position: absolute; bottom: 1px; right: 3px; font-size: 10px; color: #fff; font-weight: bold; text-shadow: 1px 1px #000; }
+
+        /* Mobile Controls Overlays */
+        #joystick-zone { position: absolute; bottom: 20px; left: 20px; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 50%; z-index: 6; display: none; }
+        #joystick-knob { position: absolute; top: 35px; left: 35px; width: 50px; height: 50px; background: rgba(255, 255, 255, 0.4); border-radius: 50%; }
+        
+        #mobile-buttons { position: absolute; bottom: 20px; right: 20px; display: none; flex-direction: column; gap: 10px; z-index: 6; }
+        .mobile-btn { width: 58px; height: 58px; background: rgba(0, 0, 0, 0.6); border: 2px solid #fff; border-radius: 50%; color: #fff; font-size: 13px; font-weight: bold; display: flex; justify-content: center; align-items: center; text-align: center; }
+        .mobile-btn:active { background: rgba(255, 255, 255, 0.4); }
 
         /* Action Text Overlay */
-        #action-text { position: absolute; top: 65%; left: 50%; transform: translateX(-50%); color: #ffeb3b; font-size: 18px; font-weight: bold; text-shadow: 2px 2px #000; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 5; }
+        #action-text { position: absolute; top: 60%; left: 50%; transform: translateX(-50%); color: #ffeb3b; font-size: 16px; font-weight: bold; text-shadow: 2px 2px #000; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 5; }
 
         /* Start Screen Blocker */
         #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 10; cursor: pointer; }
-        #instructions { text-align: center; padding: 30px; background: rgba(20, 20, 20, 0.95); border: 3px solid #ff0055; box-shadow: 0 0 30px #ff0055; border-radius: 8px; max-width: 520px; }
+        #instructions { text-align: center; padding: 25px; background: rgba(20, 20, 20, 0.95); border: 3px solid #ff0055; box-shadow: 0 0 30px #ff0055; border-radius: 8px; max-width: 90%; width: 480px; }
     </style>
     <!-- Three.js and PointerLockControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -107,6 +115,14 @@
         <div id="flash-overlay"></div>
         <div id="totem-pop-overlay">🗿</div>
         <div id="action-text">Ate Golden Apple! +4 Hearts</div>
+
+        <!-- Touch Joysticks & Buttons -->
+        <div id="joystick-zone"><div id="joystick-knob"></div></div>
+        <div id="mobile-buttons">
+            <div class="mobile-btn" id="btn-jump">JUMP</div>
+            <div class="mobile-btn" id="btn-hit" style="border-color:#ff5555;">HIT</div>
+            <div class="mobile-btn" id="btn-place" style="border-color:#55ff55;">PLACE</div>
+        </div>
 
         <!-- HUD -->
         <div id="hud">
@@ -141,11 +157,11 @@
             <!-- Hotbar (5 Slots) -->
             <div id="hotbar-wrapper">
                 <div id="hotbar">
-                    <div class="slot active" id="slot-1"><span class="slot-num">1</span>🗡️</div>
-                    <div class="slot" id="slot-2"><span class="slot-num">2</span><div class="pixel-gapple"></div><span class="count-badge" id="gapple-count">64</span></div>
-                    <div class="slot" id="slot-3"><span class="slot-num">3</span>🔮<span class="count-badge" id="crystal-count">64</span></div>
-                    <div class="slot" id="slot-4"><span class="slot-num">4</span>⬛<span class="count-badge" id="obsidian-count">64</span></div>
-                    <div class="slot" id="slot-5"><span class="slot-num">5</span>🗿<span class="count-badge" id="totem-count">1</span></div>
+                    <div class="slot active" id="slot-1" onclick="selectSlot(1)"><span class="slot-num">1</span>🗡️</div>
+                    <div class="slot" id="slot-2" onclick="selectSlot(2)"><span class="slot-num">2</span><div class="pixel-gapple"></div><span class="count-badge" id="gapple-count">64</span></div>
+                    <div class="slot" id="slot-3" onclick="selectSlot(3)"><span class="slot-num">3</span>🔮<span class="count-badge" id="crystal-count">64</span></div>
+                    <div class="slot" id="slot-4" onclick="selectSlot(4)"><span class="slot-num">4</span>⬛<span class="count-badge" id="obsidian-count">64</span></div>
+                    <div class="slot" id="slot-5" onclick="selectSlot(5)"><span class="slot-num">5</span>🗿<span class="count-badge" id="totem-count">1</span></div>
                 </div>
             </div>
         </div>
@@ -153,17 +169,13 @@
         <!-- Start Overlay -->
         <div id="blocker">
             <div id="instructions">
-                <h1 style="color:#ff0055; margin-bottom:12px; font-size: 26px;">DONUT SMP CRYSTAL PVP</h1>
-                <p style="color:#ffaa00; font-weight:bold; margin-bottom:15px; font-size: 16px;">Click Anywhere to Play!</p>
-                <div style="text-align: left; background: #111; padding: 15px; border-radius: 5px; font-size: 13px; line-height: 1.6;">
-                    <p><b>WASD</b> : Walk | <b>SPACE</b> : Jump</p>
-                    <p><b>1-5 / Scroll</b> : Select Hotbar Items</p>
-                    <p><b>Left-Click 🗡️</b> : Swing Diamond Sword to Hit Target / Explode Crystal</p>
-                    <p><b>Right-Click ⬛</b> : Place Obsidian Block</p>
-                    <p><b>Right-Click 🔮</b> : Place End Crystal on Obsidian or Ground</p>
-                    <p><b>Left-Click 🔮</b> : Hit & Detonate End Crystal!</p>
-                    <p><b>Right-Click 🍏</b> : Eat Golden Apple (Restores Health)</p>
-                    <p><b>🗿 Totem of Undying</b> : Hold in Slot 5 or Inventory to auto-revive on lethal hit!</p>
+                <h1 style="color:#ff0055; margin-bottom:10px; font-size: 22px;">DONUT SMP CRYSTAL PVP</h1>
+                <p style="color:#ffaa00; font-weight:bold; margin-bottom:12px; font-size: 15px;">Tap / Click to Play!</p>
+                <div style="text-align: left; background: #111; padding: 12px; border-radius: 5px; font-size: 12px; line-height: 1.5;">
+                    <p><b>Mobile Touch:</b> Left side Joystick to Move | Right side Touch-Drag to Look</p>
+                    <p><b>Mobile Buttons:</b> Tap JUMP, HIT (Break/Detonate), PLACE (Obsidian/Crystal)</p>
+                    <p><b>PC WASD / Space:</b> Walk / Jump</p>
+                    <p><b>Left / Right Click:</b> Hit / Place Block & Crystal</p>
                 </div>
             </div>
         </div>
@@ -175,6 +187,13 @@
         let canJump = false;
         const velocity = new THREE.Vector3();
         let prevTime = performance.now();
+
+        // Mobile Controls Variables
+        let isMobile = false;
+        let touchLookID = null, touchMoveID = null;
+        let touchLookLastX = 0, touchLookLastY = 0;
+        let joystickCenter = { x: 0, y: 0 };
+        let cameraEuler = new THREE.Euler(0, 0, 0, 'YXZ');
 
         // Inventory & Game State
         let currentSlot = 1; 
@@ -254,7 +273,13 @@
             }
         }
 
+        function detectMobile() {
+            return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        }
+
         function init() {
+            isMobile = detectMobile();
+
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x5c88c7);
             scene.fog = new THREE.FogExp2(0x5c88c7, 0.005);
@@ -277,9 +302,21 @@
 
             controls = new THREE.PointerLockControls(camera, document.body);
             const blocker = document.getElementById('blocker');
-            blocker.addEventListener('click', () => { controls.lock(); });
+
+            blocker.addEventListener('click', () => { 
+                if (!isMobile) {
+                    controls.lock(); 
+                } else {
+                    blocker.style.display = 'none';
+                    document.getElementById('joystick-zone').style.display = 'block';
+                    document.getElementById('mobile-buttons').style.display = 'flex';
+                }
+            });
+
             controls.addEventListener('lock', () => blocker.style.display = 'none');
-            controls.addEventListener('unlock', () => blocker.style.display = 'flex');
+            controls.addEventListener('unlock', () => {
+                if (!isMobile) blocker.style.display = 'flex';
+            });
 
             scene.add(controls.getObject());
             controls.getObject().position.set(0, 3, 0);
@@ -289,6 +326,10 @@
             spawnDummyTargets();
             setupControls();
             setupMouseInteraction();
+
+            if (isMobile) {
+                setupMobileTouchControls();
+            }
 
             window.addEventListener('resize', onWindowResize);
             animate();
@@ -300,12 +341,10 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // Highly Optimized Arena Built via Instanced Mesh Techniques
         function buildColosseumArenaInstanced() {
             const boxGeo = new THREE.BoxGeometry(1, 1, 1);
             const radius = 35;
 
-            // Materials
             const sandMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.9 });
             const stoneMat = new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.8 });
             const darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
@@ -313,7 +352,6 @@
             const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.7 });
             const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57, roughness: 0.6 });
 
-            // 1. Sand Floor
             const sandPositions = [];
             for (let x = -radius; x <= radius; x++) {
                 for (let z = -radius; z <= radius; z++) {
@@ -329,7 +367,6 @@
                 dummyMatrix.setPosition(pos);
                 sandInstanced.setMatrixAt(i, dummyMatrix);
 
-                // Invisible ground interaction mesh per position for raycasting
                 const invisibleMesh = new THREE.Mesh(boxGeo, new THREE.MeshBasicMaterial({ visible: false }));
                 invisibleMesh.position.copy(pos);
                 scene.add(invisibleMesh);
@@ -338,7 +375,6 @@
             sandInstanced.instanceMatrix.needsUpdate = true;
             scene.add(sandInstanced);
 
-            // Ring helper calculation
             function getRingTransforms(ringRadius, startY, height) {
                 const transforms = [];
                 const circumference = 2 * Math.PI * ringRadius;
@@ -354,7 +390,6 @@
                 return transforms;
             }
 
-            // Collect rings batch matrix data
             const darkStoneTransforms = getRingTransforms(radius + 1, 1, 4);
             const stoneTransforms = [];
 
@@ -408,7 +443,6 @@
             createBatchMesh(boxGeo, roofMat, roofTransforms);
         }
 
-        // Target Dummies in Arena
         function spawnDummyTargets() {
             const dummyPositions = [
                 { x: 5, z: -5 },
@@ -437,9 +471,7 @@
             });
         }
 
-        // First-Person Held Item Models
         function buildHeldItemModels() {
-            // Diamond Sword
             swordMesh = new THREE.Group();
             const bladeGeo = new THREE.BoxGeometry(0.08, 0.9, 0.04);
             const bladeMat = new THREE.MeshStandardMaterial({ color: 0x55ffff, metalness: 0.8, roughness: 0.2 });
@@ -457,7 +489,6 @@
             swordMesh.rotation.set(-0.2, -0.4, -0.3);
             camera.add(swordMesh);
 
-            // Totem Model
             heldTotemMesh = new THREE.Group();
             const tBodyGeo = new THREE.BoxGeometry(0.25, 0.35, 0.15);
             const tBodyMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.5 });
@@ -469,18 +500,15 @@
             camera.add(heldTotemMesh);
         }
 
-        // End Crystal Mesh Construction
         function createEndCrystalMesh() {
             const crystalGroup = new THREE.Group();
 
-            // Obsidian Base
             const baseGeo = new THREE.BoxGeometry(0.9, 0.25, 0.9);
             const baseMat = new THREE.MeshStandardMaterial({ color: 0x150b24, roughness: 0.3, metalness: 0.8 });
             const baseMesh = new THREE.Mesh(baseGeo, baseMat);
             baseMesh.position.y = 0.125;
             crystalGroup.add(baseMesh);
 
-            // Core Flame
             const coreGeo = new THREE.BoxGeometry(0.35, 0.55, 0.35);
             const coreMat = new THREE.MeshBasicMaterial({ color: 0xff3300 });
             const coreMesh = new THREE.Mesh(coreGeo, coreMat);
@@ -493,7 +521,6 @@
             flameMesh.position.y = 0.65;
             crystalGroup.add(flameMesh);
 
-            // Floating Glass Shell
             const crystalGeo = new THREE.BoxGeometry(0.65, 0.65, 0.65);
             const crystalMat = new THREE.MeshPhongMaterial({
                 color: 0xda70d6,
@@ -555,6 +582,97 @@
             });
         }
 
+        // Mobile Touch Events Implementation
+        function setupMobileTouchControls() {
+            const joystickZone = document.getElementById('joystick-zone');
+            const joystickKnob = document.getElementById('joystick-knob');
+
+            const rect = joystickZone.getBoundingClientRect();
+            joystickCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+
+            window.addEventListener('touchstart', (e) => {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.clientX < window.innerWidth / 2 && touchMoveID === null) {
+                        touchMoveID = touch.identifier;
+                        updateJoystick(touch);
+                    } else if (touch.clientX >= window.innerWidth / 2 && touchLookID === null) {
+                        touchLookID = touch.identifier;
+                        touchLookLastX = touch.clientX;
+                        touchLookLastY = touch.clientY;
+                    }
+                }
+            }, { passive: false });
+
+            window.addEventListener('touchmove', (e) => {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.identifier === touchMoveID) {
+                        updateJoystick(touch);
+                    } else if (touch.identifier === touchLookID) {
+                        const deltaX = touch.clientX - touchLookLastX;
+                        const deltaY = touch.clientY - touchLookLastY;
+
+                        cameraEuler.setFromQuaternion(camera.quaternion);
+                        cameraEuler.y -= deltaX * 0.005;
+                        cameraEuler.x -= deltaY * 0.005;
+                        cameraEuler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cameraEuler.x));
+                        camera.quaternion.setFromEuler(cameraEuler);
+
+                        touchLookLastX = touch.clientX;
+                        touchLookLastY = touch.clientY;
+                    }
+                }
+            }, { passive: false });
+
+            window.addEventListener('touchend', resetTouches);
+            window.addEventListener('touchcancel', resetTouches);
+
+            function resetTouches(e) {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.identifier === touchMoveID) {
+                        touchMoveID = null;
+                        moveForward = moveBackward = moveLeft = moveRight = false;
+                        joystickKnob.style.transform = `translate(0px, 0px)`;
+                    } else if (touch.identifier === touchLookID) {
+                        touchLookID = null;
+                    }
+                }
+            }
+
+            function updateJoystick(touch) {
+                const dx = touch.clientX - joystickCenter.x;
+                const dy = touch.clientY - joystickCenter.y;
+                const dist = Math.min(Math.hypot(dx, dy), 40);
+                const angle = Math.atan2(dy, dx);
+
+                const kx = Math.cos(angle) * dist;
+                const ky = Math.sin(angle) * dist;
+                joystickKnob.style.transform = `translate(${kx}px, ${ky}px)`;
+
+                moveForward = dy < -10;
+                moveBackward = dy > 10;
+                moveLeft = dx < -10;
+                moveRight = dx > 10;
+            }
+
+            document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (canJump) { velocity.y += 11.0; canJump = false; }
+            });
+
+            document.getElementById('btn-hit').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleLeftClick();
+            });
+
+            document.getElementById('btn-place').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleRightClick();
+            });
+        }
+
         function selectSlot(slotNum) {
             currentSlot = slotNum;
             for (let i = 1; i <= 5; i++) {
@@ -569,7 +687,7 @@
 
         function setupMouseInteraction() {
             document.addEventListener('mousedown', (e) => {
-                if (!controls.isLocked) return;
+                if (!controls.isLocked && !isMobile) return;
 
                 if (e.button === 0) {
                     handleLeftClick();
@@ -596,7 +714,6 @@
 
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
-            // Check Crystal Hit
             const crystalHits = raycaster.intersectObjects(endCrystals, true);
             if (crystalHits.length > 0) {
                 let hitObj = crystalHits[0].object;
@@ -607,7 +724,6 @@
                 return;
             }
 
-            // Check Target Dummy Hit
             const dummyHits = raycaster.intersectObjects(dummyTargets.map(d => d.children[0]), true);
             if (dummyHits.length > 0) {
                 const dummy = dummyHits[0].object.parent;
@@ -695,12 +811,10 @@
 
             spawnParticleExplosion(explosionPos);
 
-            // Screen Flash Effect
             const flash = document.getElementById('flash-overlay');
             flash.style.background = 'rgba(255, 255, 255, 0.6)';
             setTimeout(() => { flash.style.background = 'rgba(255, 255, 255, 0)'; }, 60);
 
-            // Knockback & Player Damage
             const dist = camera.position.distanceTo(explosionPos);
             if (dist < 6.0) {
                 const damage = Math.round((1 - dist / 6.0) * 8);
@@ -713,7 +827,6 @@
             }
         }
 
-        // Particle System for Explosion
         function spawnParticleExplosion(pos) {
             const particleCount = 60;
             const geometry = new THREE.BufferGeometry();
@@ -789,7 +902,6 @@
             textTimeout = setTimeout(() => { el.style.opacity = 0; }, 1800);
         }
 
-        // Main Smooth Engine Loop
         function animate() {
             requestAnimationFrame(animate);
 
@@ -797,11 +909,10 @@
             const delta = Math.min((time - prevTime) / 1000, 0.1); 
             prevTime = time;
 
-            // Player Controller Mechanics
-            if (controls.isLocked) {
+            if (controls.isLocked || isMobile) {
                 velocity.x -= velocity.x * 10.0 * delta;
                 velocity.z -= velocity.z * 10.0 * delta;
-                velocity.y -= 25.0 * delta; // Constant Gravity
+                velocity.y -= 25.0 * delta;
 
                 const inputDir = new THREE.Vector3(
                     Number(moveRight) - Number(moveLeft),
@@ -823,7 +934,6 @@
                 }
             }
 
-            // Crystal Idle Animation
             endCrystals.forEach(c => {
                 if (c.userData.outerCrystal) {
                     c.userData.outerCrystal.rotation.y += delta * 1.5;
@@ -832,7 +942,6 @@
                 }
             });
 
-            // Particles Update Loop
             for (let i = particleSystems.length - 1; i >= 0; i--) {
                 const ps = particleSystems[i];
                 ps.userData.age += delta;
@@ -843,7 +952,7 @@
                     posAttr.setX(j, posAttr.getX(j) + vel.x * delta);
                     posAttr.setY(j, posAttr.getY(j) + vel.y * delta);
                     posAttr.setZ(j, posAttr.getZ(j) + vel.z * delta);
-                    vel.y -= 15.0 * delta; // Particle gravity
+                    vel.y -= 15.0 * delta;
                 }
                 posAttr.needsUpdate = true;
 

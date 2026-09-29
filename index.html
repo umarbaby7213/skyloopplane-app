@@ -1,19 +1,51 @@
 <!DOCTYPE html>
-<html lang="haw">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kahua Pāʻani Nui - Arena 3D</title>
+    <title>Donut SMP - Arena & Custom Hearts</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
         #game-container { width: 100vw; height: 100vh; position: relative; }
+        
+        /* Crosshair */
         #crosshair { position: absolute; top: 50%; left: 50%; width: 16px; height: 16px; transform: translate(-50%, -50%); pointer-events: none; z-index: 5; }
-        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(255, 255, 255, 0.8); }
+        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(255, 255, 255, 0.9); box-shadow: 0 0 2px #000; }
         #crosshair::before { left: 7px; top: 0; width: 2px; height: 16px; }
         #crosshair::after { left: 0; top: 7px; width: 16px; height: 2px; }
-        #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 10; cursor: pointer; }
-        #instructions { text-align: center; padding: 20px; background: rgba(0, 0, 0, 0.8); border: 2px solid #fff; border-radius: 8px; }
+        
+        /* HUD & Custom Pixel Hearts */
+        #hud { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 5; }
+        .hearts-bar { display: flex; gap: 4px; background: rgba(0, 0, 0, 0.5); padding: 8px 12px; border-radius: 4px; margin-bottom: 8px; }
+        .heart-wrapper { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+        
+        /* Pure CSS Pixel Art Minecraft Heart */
+        .pixel-heart {
+            width: 9px;
+            height: 9px;
+            image-rendering: pixelated;
+            box-shadow: 
+                2px 0px 0 #000, 3px 0px 0 #000, 6px 0px 0 #000, 7px 0px 0 #000,
+                1px 1px 0 #000, 2px 1px 0 #e02424, 3px 1px 0 #ff6b6b, 4px 1px 0 #000, 5px 1px 0 #000, 6px 1px 0 #e02424, 7px 1px 0 #e02424, 8px 1px 0 #000,
+                0px 2px 0 #000, 1px 2px 0 #ffffff, 2px 2px 0 #ff6b6b, 3px 2px 0 #e02424, 4px 2px 0 #e02424, 5px 2px 0 #e02424, 6px 2px 0 #e02424, 7px 2px 0 #9c0000, 8px 2px 0 #000,
+                0px 3px 0 #000, 1px 3px 0 #ff6b6b, 2px 3px 0 #e02424, 3px 3px 0 #e02424, 4px 3px 0 #e02424, 5px 3px 0 #e02424, 6px 3px 0 #e02424, 7px 3px 0 #9c0000, 8px 3px 0 #000,
+                0px 4px 0 #000, 1px 4px 0 #e02424, 2px 4px 0 #e02424, 3px 4px 0 #e02424, 4px 4px 0 #e02424, 5px 4px 0 #e02424, 6px 4px 0 #e02424, 7px 4px 0 #9c0000, 8px 4px 0 #000,
+                1px 5px 0 #000, 2px 5px 0 #e02424, 3px 5px 0 #e02424, 4px 5px 0 #e02424, 5px 5px 0 #e02424, 6px 5px 0 #9c0000, 7px 5px 0 #000,
+                2px 6px 0 #000, 3px 6px 0 #e02424, 4px 6px 0 #e02424, 5px 6px 0 #9c0000, 6px 6px 0 #000,
+                3px 7px 0 #000, 4px 7px 0 #e02424, 5px 7px 0 #000,
+                4px 8px 0 #000;
+            transform: scale(2);
+        }
+
+        /* Hotbar */
+        #hotbar { display: flex; background: rgba(0, 0, 0, 0.6); border: 4px solid #3c3c3c; border-radius: 4px; }
+        .slot { width: 48px; height: 48px; border: 3px solid #8b8b8b; background: rgba(139, 139, 139, 0.3); margin: 2px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 20px; }
+        .slot.active { border-color: #ffffff; background: rgba(255, 255, 255, 0.5); box-shadow: inset 0 0 5px #fff; }
+
+        /* Start Blocker Screen */
+        #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 10; cursor: pointer; }
+        #instructions { text-align: center; padding: 25px; background: rgba(20, 20, 20, 0.95); border: 3px solid #ff0055; box-shadow: 0 0 25px #ff0055; border-radius: 8px; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
@@ -21,10 +53,32 @@
 <body>
     <div id="game-container">
         <div id="crosshair"></div>
+        <div id="hud">
+            <div class="hearts-bar">
+                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+            </div>
+            <div id="hotbar">
+                <div class="slot active" id="slot-1">🗡️</div>
+                <div class="slot" id="slot-2">🔮</div>
+                <div class="slot" id="slot-3">🗿</div>
+                <div class="slot" id="slot-4">⬛</div>
+            </div>
+        </div>
         <div id="blocker">
             <div id="instructions">
-                <h1>Kahua Pāʻani Nui (Arena)</h1>
-                <p>Kāpō i ka pae e pāʻani ai / E neʻe me WASD a me ka 'Mouse'</p>
+                <h1 style="color:#ff0055; margin-bottom:10px;">DONUT SMP ARENA</h1>
+                <p style="color:#ffaa00; font-weight:bold; margin-bottom:15px;">Click Screen to Play!</p>
+                <p><b>WASD</b> : Walk | <b>SPACE</b> : Jump</p>
+                <p><b>MOUSE</b> : Look Around</p>
             </div>
         </div>
     </div>
@@ -32,18 +86,19 @@
     <script>
         let scene, camera, renderer, controls;
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let canJump = false;
         const velocity = new THREE.Vector3();
         let prevTime = performance.now();
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x68a0ff); // Lani hōʻikeʻike
-            scene.fog = new THREE.FogExp2(0x68a0ff, 0.008);
+            scene.background = new THREE.Color(0x68a0ff);
+            scene.fog = new THREE.FogExp2(0x68a0ff, 0.005);
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-            // Mālamalama
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
             scene.add(ambientLight);
 
             const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -62,7 +117,7 @@
             controls.addEventListener('unlock', () => blocker.style.display = 'flex');
 
             scene.add(controls.getObject());
-            controls.getObject().position.set(0, 3, 0); // Kū ma ka waena o ke kahua
+            controls.getObject().position.set(0, 3, 0); // Center of arena
 
             buildColosseumArena();
             setupControls();
@@ -80,18 +135,17 @@
         function buildColosseumArena() {
             const boxGeo = new THREE.BoxGeometry(1, 1, 1);
             
-            // Nā mea hana pōhaku like ʻole
-            const sandMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.9 }); // Pukano kahua
-            const stoneMat = new THREE.MeshStandardMaterial({ color: 0x707070, roughness: 0.8 }); // Pōhaku
-            const darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x404040, roughness: 0.8 }); // Pōhaku pō darkness
-            const pillarMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.5 }); // Pou keʻokeʻo
-            const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.7 }); // Kaupoku
-            const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57, roughness: 0.6 }); // Lau nahele
+            // Materials
+            const sandMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.9 });
+            const stoneMat = new THREE.MeshStandardMaterial({ color: 0x707070, roughness: 0.8 });
+            const darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x404040, roughness: 0.8 });
+            const pillarMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.5 });
+            const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.7 });
+            const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57, roughness: 0.6 });
 
-            const radius = 35; // Ke kalaiwa o ke kahua nui
-            const instancedMeshGroup = new THREE.Group();
+            const radius = 35; // Ground arena radius
 
-            // 1. Honua One (Sand Arena Floor)
+            // 1. Solid Sand Arena Floor
             for (let x = -radius; x <= radius; x++) {
                 for (let z = -radius; z <= radius; z++) {
                     if (x * x + z * z <= radius * radius) {
@@ -102,62 +156,70 @@
                 }
             }
 
-            // 2. Ka pā pōhaku poepoe a me nā noho (Circular Arena Walls & Seating)
-            const segments = 64;
-            for (let i = 0; i < segments; i++) {
-                const angle = (i / segments) * Math.PI * 2;
-                const cos = Math.cos(angle);
-                const sin = Math.sin(angle);
+            // Dense Ring Helper Function (Eliminates gaps/holes)
+            function createSolidRing(ringRadius, startY, height, material) {
+                const circumference = 2 * Math.PI * ringRadius;
+                const steps = Math.ceil(circumference * 1.5);
+                
+                for (let i = 0; i < steps; i++) {
+                    const angle = (i / steps) * Math.PI * 2;
+                    const x = Math.round(Math.cos(angle) * ringRadius);
+                    const z = Math.round(Math.sin(angle) * ringRadius);
 
-                // Nā pahi pōhaku pōʻai mua (Lower Ring Base)
-                for (let h = 1; h <= 4; h++) {
-                    const blockRadius = radius + 1;
-                    const wallBlock = new THREE.Mesh(boxGeo, darkStoneMat);
-                    wallBlock.position.set(cos * blockRadius, h, sin * blockRadius);
-                    wallBlock.lookAt(0, h, 0);
-                    scene.add(wallBlock);
-                }
-
-                // Nā tier noho pōhaku (Tiered Bleachers)
-                for (let tier = 0; tier < 8; tier++) {
-                    const currentRadius = radius + 2 + (tier * 1.5);
-                    const tierHeight = 4 + (tier * 1.2);
-                    
-                    const seatBlock = new THREE.Mesh(boxGeo, stoneMat);
-                    seatBlock.position.set(cos * currentRadius, tierHeight, sin * currentRadius);
-                    seatBlock.scale.set(1.5, 1.2, 1.5);
-                    seatBlock.lookAt(0, tierHeight, 0);
-                    scene.add(seatBlock);
-                }
-
-                // 3. Nā Pou Keʻokeʻo (Pillars & Arches)
-                if (i % 3 === 0) {
-                    const pillarRadius = radius + 14;
-                    const pillarBaseHeight = 14;
-                    
-                    // Pou
-                    for (let ph = 0; ph < 8; ph++) {
-                        const pillar = new THREE.Mesh(boxGeo, pillarMat);
-                        pillar.position.set(cos * pillarRadius, pillarBaseHeight + ph, sin * pillarRadius);
-                        pillar.scale.set(1.2, 1, 1.2);
-                        scene.add(pillar);
+                    for (let y = 0; y < height; y++) {
+                        const block = new THREE.Mesh(boxGeo, material);
+                        block.position.set(x, startY + y, z);
+                        scene.add(block);
                     }
+                }
+            }
 
-                    // Nā meakanu no ke kāhiko (Bush Decor)
-                    const bush = new THREE.Mesh(boxGeo, leafMat);
-                    bush.position.set(cos * (pillarRadius - 2), 14, sin * (pillarRadius - 2));
-                    bush.scale.set(1.2, 1.5, 1.2);
-                    scene.add(bush);
+            // 2. Solid Lower Ring Wall
+            createSolidRing(radius + 1, 1, 4, darkStoneMat);
+
+            // 3. Solid Seating Tier Steps (No gaps)
+            for (let tier = 0; tier < 8; tier++) {
+                const currentRadius = radius + 2 + tier;
+                const tierHeight = 4 + tier;
+                createSolidRing(currentRadius, tierHeight, 1, stoneMat);
+                
+                // Fill space beneath seating steps
+                for (let y = 1; y < tierHeight; y++) {
+                    createSolidRing(currentRadius, y, 1, darkStoneMat);
+                }
+            }
+
+            // 4. Pillars & Bush Decor
+            const pillarRadius = radius + 10;
+            const pillarCount = 24;
+            for (let i = 0; i < pillarCount; i++) {
+                const angle = (i / pillarCount) * Math.PI * 2;
+                const px = Math.cos(angle) * pillarRadius;
+                const pz = Math.sin(angle) * pillarRadius;
+
+                // Pillars
+                for (let ph = 0; ph < 8; ph++) {
+                    const pillar = new THREE.Mesh(boxGeo, pillarMat);
+                    pillar.position.set(px, 12 + ph, pz);
+                    pillar.scale.set(1.5, 1, 1.5);
+                    scene.add(pillar);
                 }
 
-                // 4. Kaupoku Pōhaku ʻUlaʻula ma luna loa (Top Roof Rim)
-                const topRadius = radius + 15;
-                const topHeight = 23;
-                const roofBlock = new THREE.Mesh(boxGeo, woodMat);
-                roofBlock.position.set(cos * topRadius, topHeight, sin * topRadius);
-                roofBlock.scale.set(2, 1, 2);
-                scene.add(roofBlock);
+                // Decorative Bushes
+                const bush = new THREE.Mesh(boxGeo, leafMat);
+                bush.position.set(px * 0.95, 12, pz * 0.95);
+                bush.scale.set(1.5, 1.5, 1.5);
+                scene.add(bush);
             }
+
+            // 5. Solid Upper Walkway Platform
+            const platformRadius = radius + 10;
+            createSolidRing(platformRadius - 1, 20, 1, stoneMat);
+            createSolidRing(platformRadius, 20, 1, stoneMat);
+            createSolidRing(platformRadius + 1, 20, 1, stoneMat);
+
+            // 6. Solid Top Roof Rim
+            createSolidRing(platformRadius, 21, 1, roofMat);
         }
 
         function setupControls() {
@@ -167,6 +229,7 @@
                     case 'KeyS': moveBackward = true; break;
                     case 'KeyA': moveLeft = true; break;
                     case 'KeyD': moveRight = true; break;
+                    case 'Space': if (canJump) { velocity.y += 12.0; canJump = false; } break;
                 }
             });
             document.addEventListener('keyup', (e) => {
@@ -187,14 +250,22 @@
             if (controls.isLocked) {
                 velocity.x -= velocity.x * 10.0 * delta;
                 velocity.z -= velocity.z * 10.0 * delta;
+                velocity.y -= 9.8 * 25.0 * delta;
 
                 const dirZ = Number(moveForward) - Number(moveBackward);
                 const dirX = Number(moveRight) - Number(moveLeft);
-                if (moveForward || moveBackward) velocity.z -= dirZ * 40.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= dirX * 40.0 * delta;
+                if (moveForward || moveBackward) velocity.z -= dirZ * 50.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= dirX * 50.0 * delta;
 
                 controls.moveRight(-velocity.x * delta);
                 controls.moveForward(-velocity.z * delta);
+                controls.getObject().position.y += (velocity.y * delta);
+
+                if (controls.getObject().position.y < 2.0) {
+                    velocity.y = 0;
+                    controls.getObject().position.y = 2.0;
+                    canJump = true;
+                }
             }
 
             prevTime = time;

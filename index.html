@@ -3,31 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Donut SMP - 2 Player Crystal PvP</title>
+    <title>Donut SMP - End Crystal PvP, Sword, Totem & Golden Apple</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
+        #game-container { width: 100vw; height: 100vh; position: relative; }
         
-        #game-view { display: flex; width: 100vw; height: 100vh; position: relative; }
-        .player-viewport { width: 50vw; height: 100vh; position: relative; border-right: 2px solid #222; overflow: hidden; }
-        .player-viewport:last-child { border-right: none; }
+        /* Crosshair */
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 16px; height: 16px; transform: translate(-50%, -50%); pointer-events: none; z-index: 5; }
+        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(255, 255, 255, 0.9); box-shadow: 0 0 2px #000; }
+        #crosshair::before { left: 7px; top: 0; width: 2px; height: 16px; }
+        #crosshair::after { left: 0; top: 7px; width: 16px; height: 2px; }
+        
+        /* Flash Overlays */
+        #flash-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255, 255, 255, 0); pointer-events: none; z-index: 4; transition: background 0.05s ease-out; }
+        
+        /* Totem Pop Animation UI */
+        #totem-pop-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
+            pointer-events: none; z-index: 8; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.27);
+            font-size: 130px; text-shadow: 0 0 20px #ffaa00;
+        }
+        #totem-pop-overlay.active { transform: translate(-50%, -50%) scale(1.4); }
 
-        /* Crosshairs */
-        .crosshair { position: absolute; top: 50%; left: 50%; width: 16px; height: 16px; transform: translate(-50%, -50%); pointer-events: none; z-index: 5; }
-        .crosshair::before, .crosshair::after { content: ''; position: absolute; background: rgba(255, 255, 255, 0.9); box-shadow: 0 0 2px #000; }
-        .crosshair::before { left: 7px; top: 0; width: 2px; height: 16px; }
-        .crosshair::after { left: 0; top: 7px; width: 16px; height: 2px; }
-
-        /* HUD Overlays */
-        .hud { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 5; }
-        .player-tag { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.7); color: #fff; padding: 6px 12px; border-radius: 4px; font-weight: bold; border: 2px solid #555; z-index: 5; }
-
-        .status-wrapper { display: flex; justify-content: space-between; width: 100%; margin-bottom: 6px; gap: 10px; }
-        .hearts-bar { display: flex; gap: 2px; background: rgba(0, 0, 0, 0.6); padding: 4px 8px; border-radius: 4px; border: 2px solid #3c3c3c; }
-        .heart-wrapper { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; }
-
+        /* HUD Container */
+        #hud { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 5; }
+        
+        /* Hearts & Food Bars Row */
+        .status-wrapper { display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px; gap: 20px; }
+        
+        .hearts-bar, .food-bar { display: flex; gap: 2px; background: rgba(0, 0, 0, 0.6); padding: 6px 10px; border-radius: 4px; border: 2px solid #3c3c3c; }
+        .heart-wrapper, .shank-wrapper { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+        
+        /* Pixel Art Minecraft Heart */
         .pixel-heart {
-            width: 8px; height: 8px; image-rendering: pixelated;
+            width: 9px; height: 9px; image-rendering: pixelated;
             box-shadow: 
                 2px 0px 0 #000, 3px 0px 0 #000, 6px 0px 0 #000, 7px 0px 0 #000,
                 1px 1px 0 #000, 2px 1px 0 #e02424, 3px 1px 0 #ff6b6b, 4px 1px 0 #000, 5px 1px 0 #000, 6px 1px 0 #e02424, 7px 1px 0 #e02424, 8px 1px 0 #000,
@@ -37,281 +47,733 @@
                 1px 5px 0 #000, 2px 5px 0 #e02424, 3px 5px 0 #e02424, 4px 5px 0 #e02424, 5px 5px 0 #e02424, 6px 5px 0 #9c0000, 7px 5px 0 #000,
                 2px 6px 0 #000, 3px 6px 0 #e02424, 4px 6px 0 #e02424, 5px 6px 0 #9c0000, 6px 6px 0 #000,
                 3px 7px 0 #000, 4px 7px 0 #e02424, 5px 7px 0 #000, 4px 8px 0 #000;
-            transform: scale(1.6); transition: opacity 0.2s;
+            transform: scale(2); transition: opacity 0.2s;
         }
         .pixel-heart.empty { opacity: 0.2; }
 
-        .hotbar { display: flex; background: rgba(0, 0, 0, 0.7); border: 3px solid #3c3c3c; border-radius: 4px; }
-        .slot { width: 44px; height: 44px; border: 2px solid #8b8b8b; background: rgba(139, 139, 139, 0.3); margin: 2px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 18px; position: relative; }
-        .slot.active { border-color: #ffffff; background: rgba(255, 255, 255, 0.4); box-shadow: inset 0 0 6px #fff; }
-        .slot-num { position: absolute; top: 2px; left: 3px; font-size: 9px; color: #aaa; }
-        .count-badge { position: absolute; bottom: 2px; right: 3px; font-size: 10px; color: #fff; text-shadow: 1px 1px #000; }
+        /* Pixel Art Minecraft Food Shank */
+        .pixel-shank {
+            width: 9px; height: 9px; image-rendering: pixelated;
+            box-shadow: 
+                4px 0px 0 #000, 5px 0px 0 #000,
+                3px 1px 0 #000, 4px 1px 0 #d1a880, 5px 1px 0 #bd6328, 6px 1px 0 #000,
+                2px 2px 0 #000, 3px 2px 0 #d1a880, 4px 2px 0 #bd6328, 5px 2px 0 #8b3a0f, 6px 2px 0 #000,
+                1px 3px 0 #000, 2px 3px 0 #bd6328, 3px 3px 0 #bd6328, 4px 3px 0 #8b3a0f, 5px 3px 0 #5c2204, 6px 3px 0 #000,
+                0px 4px 0 #000, 1px 4px 0 #bd6328, 2px 4px 0 #8b3a0f, 3px 4px 0 #8b3a0f, 4px 4px 0 #5c2204, 5px 4px 0 #000,
+                0px 5px 0 #000, 1px 5px 0 #8b3a0f, 2px 5px 0 #8b3a0f, 3px 5px 0 #000,
+                0px 6px 0 #000, 1px 6px 0 #d1a880, 2px 6px 0 #000,
+                1px 7px 0 #000, 2px 7px 0 #ffffff, 3px 7px 0 #000, 2px 8px 0 #000;
+            transform: scale(2);
+        }
 
-        /* Start Overlay */
-        #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.88); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 10; cursor: pointer; }
-        #instructions { text-align: center; padding: 25px; background: rgba(20, 20, 20, 0.95); border: 3px solid #ff0055; box-shadow: 0 0 30px #ff0055; border-radius: 8px; max-width: 600px; }
+        /* Pixel Art Golden Apple Icon */
+        .pixel-gapple {
+            width: 9px; height: 9px; image-rendering: pixelated;
+            box-shadow: 
+                4px 0px 0 #5c2204, 5px 0px 0 #5c2204, 4px 1px 0 #5c2204,
+                2px 2px 0 #000, 3px 2px 0 #000, 6px 2px 0 #000, 7px 2px 0 #000,
+                1px 3px 0 #000, 2px 3px 0 #fff3a1, 3px 3px 0 #ffd700, 4px 3px 0 #000, 5px 3px 0 #000, 6px 3px 0 #ffd700, 7px 3px 0 #ffd700, 8px 3px 0 #000,
+                0px 4px 0 #000, 1px 4px 0 #ffffff, 2px 4px 0 #ffd700, 3px 4px 0 #ffaa00, 4px 4px 0 #ffaa00, 5px 4px 0 #ffaa00, 6px 4px 0 #ffaa00, 7px 4px 0 #c77b00, 8px 4px 0 #000,
+                0px 5px 0 #000, 1px 5px 0 #ffd700, 2px 5px 0 #ffaa00, 3px 5px 0 #ffaa00, 4px 5px 0 #ffaa00, 5px 5px 0 #ffaa00, 6px 5px 0 #ffaa00, 7px 5px 0 #c77b00, 8px 5px 0 #000,
+                0px 6px 0 #000, 1px 6px 0 #ffaa00, 2px 6px 0 #ffaa00, 3px 6px 0 #ffaa00, 4px 6px 0 #ffaa00, 5px 6px 0 #ffaa00, 6px 6px 0 #ffaa00, 7px 6px 0 #c77b00, 8px 6px 0 #000,
+                1px 7px 0 #000, 2px 7px 0 #ffaa00, 3px 7px 0 #ffaa00, 4px 7px 0 #ffaa00, 5px 7px 0 #ffaa00, 6px 7px 0 #c77b00, 7px 7px 0 #000,
+                2px 8px 0 #000, 3px 8px 0 #ffaa00, 4px 8px 0 #ffaa00, 5px 8px 0 #c77b00, 6px 8px 0 #000,
+                3px 9px 0 #000, 4px 9px 0 #ffaa00, 5px 9px 0 #000, 4px 10px 0 #000;
+            transform: scale(1.8);
+        }
+
+        /* Inventory & Hotbar UI */
+        #hotbar-wrapper { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        #hotbar { display: flex; background: rgba(0, 0, 0, 0.7); border: 4px solid #3c3c3c; border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .slot { width: 52px; height: 52px; border: 3px solid #8b8b8b; background: rgba(139, 139, 139, 0.3); margin: 2px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 22px; position: relative; }
+        .slot.active { border-color: #ffffff; background: rgba(255, 255, 255, 0.4); box-shadow: inset 0 0 8px #fff; }
+        .slot-num { position: absolute; top: 2px; left: 4px; font-size: 10px; color: #aaa; font-weight: bold; }
+        .count-badge { position: absolute; bottom: 2px; right: 4px; font-size: 11px; color: #fff; font-weight: bold; text-shadow: 1px 1px #000; }
+
+        /* Action Text Overlay */
+        #action-text { position: absolute; top: 65%; left: 50%; transform: translateX(-50%); color: #ffeb3b; font-size: 18px; font-weight: bold; text-shadow: 2px 2px #000; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 5; }
+
+        /* Start Screen Blocker */
+        #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 10; cursor: pointer; }
+        #instructions { text-align: center; padding: 30px; background: rgba(20, 20, 20, 0.95); border: 3px solid #ff0055; box-shadow: 0 0 30px #ff0055; border-radius: 8px; max-width: 520px; }
     </style>
+    <!-- Three.js and PointerLockControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
 </head>
 <body>
-    <div id="game-view">
-        <!-- Player 1 Viewport -->
-        <div class="player-viewport" id="p1-viewport">
-            <div class="player-tag" style="color: #55ffff;">P1: Blue</div>
-            <div class="crosshair"></div>
-            <div class="hud">
-                <div class="status-wrapper">
-                    <div class="hearts-bar" id="p1-hearts"></div>
+    <div id="game-container">
+        <div id="crosshair"></div>
+        <div id="flash-overlay"></div>
+        <div id="totem-pop-overlay">🗿</div>
+        <div id="action-text">Ate Golden Apple! +4 Hearts</div>
+
+        <!-- HUD -->
+        <div id="hud">
+            <!-- Health & Hunger Bars -->
+            <div class="status-wrapper">
+                <div class="hearts-bar" id="hearts-container">
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
                 </div>
-                <div class="hotbar">
-                    <div class="slot active" id="p1-slot-1"><span class="slot-num">1</span>🗡️</div>
-                    <div class="slot" id="p1-slot-2"><span class="slot-num">2</span>🍏<span class="count-badge" id="p1-gapple">64</span></div>
-                    <div class="slot" id="p1-slot-3"><span class="slot-num">3</span>🔮<span class="count-badge" id="p1-crystal">64</span></div>
-                    <div class="slot" id="p1-slot-4"><span class="slot-num">4</span>⬛<span class="count-badge" id="p1-obsidian">64</span></div>
-                    <div class="slot" id="p1-slot-5"><span class="slot-num">5</span>🗿<span class="count-badge" id="p1-totem">1</span></div>
+                <div class="food-bar">
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                </div>
+            </div>
+
+            <!-- Hotbar (5 Slots) -->
+            <div id="hotbar-wrapper">
+                <div id="hotbar">
+                    <div class="slot active" id="slot-1"><span class="slot-num">1</span>🗡️</div>
+                    <div class="slot" id="slot-2"><span class="slot-num">2</span><div class="pixel-gapple"></div><span class="count-badge" id="gapple-count">64</span></div>
+                    <div class="slot" id="slot-3"><span class="slot-num">3</span>🔮<span class="count-badge" id="crystal-count">64</span></div>
+                    <div class="slot" id="slot-4"><span class="slot-num">4</span>⬛<span class="count-badge" id="obsidian-count">64</span></div>
+                    <div class="slot" id="slot-5"><span class="slot-num">5</span>🗿<span class="count-badge" id="totem-count">1</span></div>
                 </div>
             </div>
         </div>
 
-        <!-- Player 2 Viewport -->
-        <div class="player-viewport" id="p2-viewport">
-            <div class="player-tag" style="color: #ff5555;">P2: Red</div>
-            <div class="crosshair"></div>
-            <div class="hud">
-                <div class="status-wrapper">
-                    <div class="hearts-bar" id="p2-hearts"></div>
-                </div>
-                <div class="hotbar">
-                    <div class="slot active" id="p2-slot-1"><span class="slot-num">U</span>🗡️</div>
-                    <div class="slot" id="p2-slot-2"><span class="slot-num">I</span>🍏<span class="count-badge" id="p2-gapple">64</span></div>
-                    <div class="slot" id="p2-slot-3"><span class="slot-num">O</span>🔮<span class="count-badge" id="p2-crystal">64</span></div>
-                    <div class="slot" id="p2-slot-4"><span class="slot-num">P</span>⬛<span class="count-badge" id="p2-obsidian">64</span></div>
-                    <div class="slot" id="p2-slot-5"><span class="slot-num">L</span>🗿<span class="count-badge" id="p2-totem">1</span></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Start Screen Overlay -->
+        <!-- Start Overlay -->
         <div id="blocker">
             <div id="instructions">
-                <h1 style="color:#ff0055; margin-bottom:10px;">DONUT SMP - 2 PLAYER CRYSTAL PVP</h1>
-                <p style="color:#ffaa00; font-size:16px; margin-bottom:15px; font-weight:bold;">Click Anywhere to Play Split-Screen!</p>
-                <div style="display:flex; justify-content:space-between; gap:15px; text-align:left; background:#111; padding:12px; border-radius:5px; font-size:12px;">
-                    <div>
-                        <h3 style="color:#55ffff;">PLAYER 1 (Left)</h3>
-                        <p><b>WASD</b> : Move</p>
-                        <p><b>SPACE</b> : Jump</p>
-                        <p><b>Mouse</b> : Look around</p>
-                        <p><b>Left Click</b> : Attack / Explode</p>
-                        <p><b>Right Click</b> : Place / Eat Gapple</p>
-                        <p><b>1 - 5</b> : Hotbar Select</p>
-                    </div>
-                    <div style="border-left:1px solid #444; padding-left:15px;">
-                        <h3 style="color:#ff5555;">PLAYER 2 (Right)</h3>
-                        <p><b>ARROWS</b> : Move</p>
-                        <p><b>RIGHT SHIFT</b> : Jump</p>
-                        <p><b>M Key</b> : Attack / Explode</p>
-                        <p><b>K Key</b> : Place / Eat Gapple</p>
-                        <p><b>U, I, O, P, L</b> : Hotbar Select</p>
-                    </div>
+                <h1 style="color:#ff0055; margin-bottom:12px; font-size: 26px;">DONUT SMP CRYSTAL PVP</h1>
+                <p style="color:#ffaa00; font-weight:bold; margin-bottom:15px; font-size: 16px;">Click Anywhere to Play!</p>
+                <div style="text-align: left; background: #111; padding: 15px; border-radius: 5px; font-size: 13px; line-height: 1.6;">
+                    <p><b>WASD</b> : Walk | <b>SPACE</b> : Jump</p>
+                    <p><b>1-5 / Scroll</b> : Select Hotbar Items</p>
+                    <p><b>Left-Click 🗡️</b> : Swing Diamond Sword to Hit Target / Explode Crystal</p>
+                    <p><b>Right-Click ⬛</b> : Place Obsidian Block</p>
+                    <p><b>Right-Click 🔮</b> : Place End Crystal on Obsidian or Ground</p>
+                    <p><b>Left-Click 🔮</b> : Hit & Detonate End Crystal!</p>
+                    <p><b>Right-Click 🍏</b> : Eat Golden Apple (Restores Health)</p>
+                    <p><b>🗿 Totem of Undying</b> : Hold in Slot 5 or Inventory to auto-revive on lethal hit!</p>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        let scene, renderer, controlsP1;
-        let p1Camera, p2Camera;
-
-        const endCrystals = [];
-        const placeableObjects = [];
-
-        // Players State
-        const player1 = {
-            id: 1, health: 10, maxHealth: 10, position: new THREE.Vector3(-6, 3, 0), velocity: new THREE.Vector3(),
-            mesh: null, slot: 1, counts: { gapple: 64, crystal: 64, obsidian: 64, totem: 1 },
-            keys: { fwd: false, bwd: false, left: false, right: false, jump: false }
-        };
-
-        const player2 = {
-            id: 2, health: 10, maxHealth: 10, position: new THREE.Vector3(6, 3, 0), velocity: new THREE.Vector3(),
-            mesh: null, slot: 1, counts: { gapple: 64, crystal: 64, obsidian: 64, totem: 1 },
-            keys: { fwd: false, bwd: false, left: false, right: false, jump: false }
-        };
-
+        let scene, camera, renderer, controls, raycaster;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let canJump = false;
+        const velocity = new THREE.Vector3();
         let prevTime = performance.now();
+
+        // Inventory & Game State
+        let currentSlot = 1; 
+        let playerHealth = 10;
+        const maxHealth = 10;
+
+        let counts = {
+            gapple: 64,
+            crystal: 64,
+            obsidian: 64,
+            totem: 1
+        };
+
+        // Held Item Meshes
+        let swordMesh, heldCrystalMesh, heldTotemMesh;
+
+        // Interactive Objects Tracker
+        const placeableObjects = [];
+        const endCrystals = [];
+        const particles = [];
+        const dummyTargets = [];
+
+        // Audio Generator (Web Audio API)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'explode') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(160, now);
+                osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.6);
+                gain.gain.setValueAtTime(1.0, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                osc.start(now);
+                osc.stop(now + 0.6);
+            } else if (type === 'eat') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.exponentialRampToValueAtTime(650, now + 0.15);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } else if (type === 'place') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(120, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'sword') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(80, now + 0.12);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                osc.start(now);
+                osc.stop(now + 0.12);
+            } else if (type === 'totem') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.5);
+                gain.gain.setValueAtTime(0.8, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            }
+        }
 
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x5c88c7);
+            scene.fog = new THREE.FogExp2(0x5c88c7, 0.005);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            raycaster = new THREE.Raycaster();
 
             // Lighting
-            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-            const sun = new THREE.DirectionalLight(0xfff5ea, 0.9);
-            sun.position.set(50, 100, 50);
-            scene.add(sun);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
 
-            // Cameras for Split-Screen
-            p1Camera = new THREE.PerspectiveCamera(75, (window.innerWidth / 2) / window.innerHeight, 0.1, 1000);
-            p2Camera = new THREE.PerspectiveCamera(75, (window.innerWidth / 2) / window.innerHeight, 0.1, 1000);
+            const sunLight = new THREE.DirectionalLight(0xfff5ea, 0.9);
+            sunLight.position.set(50, 100, 50);
+            scene.add(sunLight);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setScissorTest(true);
-            document.getElementById('game-view').appendChild(renderer.domElement);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.getElementById('game-container').appendChild(renderer.domElement);
 
-            // Pointer Lock for P1
-            controlsP1 = new THREE.PointerLockControls(p1Camera, document.body);
+            controls = new THREE.PointerLockControls(camera, document.body);
             const blocker = document.getElementById('blocker');
-            blocker.addEventListener('click', () => controlsP1.lock());
-            controlsP1.addEventListener('lock', () => blocker.style.display = 'none');
-            controlsP1.addEventListener('unlock', () => blocker.style.display = 'flex');
+            blocker.addEventListener('click', () => { controls.lock(); });
+            controls.addEventListener('lock', () => blocker.style.display = 'none');
+            controls.addEventListener('unlock', () => blocker.style.display = 'flex');
 
-            scene.add(controlsP1.getObject());
+            scene.add(controls.getObject());
+            controls.getObject().position.set(0, 3, 0);
 
-            createArena();
-            createPlayerMeshes();
-            buildHeartsUI('p1-hearts');
-            buildHeartsUI('p2-hearts');
-            setupInputListeners();
+            buildColosseumArena();
+            buildHeldItemModels();
+            spawnDummyTargets();
+            setupControls();
+            setupMouseInteraction();
 
             window.addEventListener('resize', onWindowResize);
             animate();
         }
 
-        function createArena() {
-            const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-            const sandMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c });
-            const obsMat = new THREE.MeshStandardMaterial({ color: 0x1a0d2b });
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
 
-            // Ground Floor
-            for (let x = -20; x <= 20; x++) {
-                for (let z = -20; z <= 20; z++) {
-                    const block = new THREE.Mesh(boxGeo, sandMat);
-                    block.position.set(x, 0, z);
-                    scene.add(block);
-                    placeableObjects.push(block);
+        function buildColosseumArena() {
+            const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+            
+            const sandMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.9 });
+            const stoneMat = new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.8 });
+            const darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
+            const pillarMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.5 });
+            const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.7 });
+            const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57, roughness: 0.6 });
+
+            const radius = 35;
+
+            // Sand Floor
+            for (let x = -radius; x <= radius; x++) {
+                for (let z = -radius; z <= radius; z++) {
+                    if (x * x + z * z <= radius * radius) {
+                        const sand = new THREE.Mesh(boxGeo, sandMat);
+                        sand.position.set(x, 0, z);
+                        sand.name = "ground";
+                        scene.add(sand);
+                        placeableObjects.push(sand);
+                    }
                 }
             }
 
-            // Central Obsidian Pillar
-            for (let y = 1; y <= 3; y++) {
-                const obs = new THREE.Mesh(boxGeo, obsMat);
-                obs.position.set(0, y, 0);
-                scene.add(obs);
-                placeableObjects.push(obs);
+            function createSolidRing(ringRadius, startY, height, material) {
+                const circumference = 2 * Math.PI * ringRadius;
+                const steps = Math.ceil(circumference * 1.5);
+                
+                for (let i = 0; i < steps; i++) {
+                    const angle = (i / steps) * Math.PI * 2;
+                    const x = Math.round(Math.cos(angle) * ringRadius);
+                    const z = Math.round(Math.sin(angle) * ringRadius);
+
+                    for (let y = 0; y < height; y++) {
+                        const block = new THREE.Mesh(boxGeo, material);
+                        block.position.set(x, startY + y, z);
+                        scene.add(block);
+                    }
+                }
             }
+
+            createSolidRing(radius + 1, 1, 4, darkStoneMat);
+
+            for (let tier = 0; tier < 8; tier++) {
+                const currentRadius = radius + 2 + tier;
+                const tierHeight = 4 + tier;
+                createSolidRing(currentRadius, tierHeight, 1, stoneMat);
+                
+                for (let y = 1; y < tierHeight; y++) {
+                    createSolidRing(currentRadius, y, 1, darkStoneMat);
+                }
+            }
+
+            const pillarRadius = radius + 10;
+            for (let i = 0; i < 24; i++) {
+                const angle = (i / 24) * Math.PI * 2;
+                const px = Math.cos(angle) * pillarRadius;
+                const pz = Math.sin(angle) * pillarRadius;
+
+                for (let ph = 0; ph < 8; ph++) {
+                    const pillar = new THREE.Mesh(boxGeo, pillarMat);
+                    pillar.position.set(px, 12 + ph, pz);
+                    pillar.scale.set(1.5, 1, 1.5);
+                    scene.add(pillar);
+                }
+
+                const bush = new THREE.Mesh(boxGeo, leafMat);
+                bush.position.set(px * 0.95, 12, pz * 0.95);
+                bush.scale.set(1.5, 1.5, 1.5);
+                scene.add(bush);
+            }
+
+            createSolidRing(pillarRadius - 1, 20, 1, stoneMat);
+            createSolidRing(pillarRadius, 20, 1, stoneMat);
+            createSolidRing(pillarRadius + 1, 20, 1, stoneMat);
+            createSolidRing(pillarRadius, 21, 1, roofMat);
         }
 
-        function createPlayerMeshes() {
-            const geo = new THREE.CylinderGeometry(0.4, 0.4, 1.8);
+        // Target Dummies in Arena
+        function spawnDummyTargets() {
+            const dummyPositions = [
+                { x: 5, z: -5 },
+                { x: -6, z: -8 },
+                { x: 8, z: 6 }
+            ];
+
+            dummyPositions.forEach(p => {
+                const dummyGroup = new THREE.Group();
+                const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.8, 8);
+                const bodyMat = new THREE.MeshStandardMaterial({ color: 0x964B00 });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.position.y = 0.9;
+                dummyGroup.add(body);
+
+                const headGeo = new THREE.SphereGeometry(0.3, 8, 8);
+                const headMat = new THREE.MeshStandardMaterial({ color: 0xffcc99 });
+                const head = new THREE.Mesh(headGeo, headMat);
+                head.position.y = 2.0;
+                dummyGroup.add(head);
+
+                dummyGroup.position.set(p.x, 0.5, p.z);
+                dummyGroup.name = "dummy";
+                scene.add(dummyGroup);
+                dummyTargets.push(dummyGroup);
+            });
+        }
+
+        // First-Person Held Item Models
+        function buildHeldItemModels() {
+            // Diamond Sword
+            swordMesh = new THREE.Group();
+            const bladeGeo = new THREE.BoxGeometry(0.08, 0.9, 0.04);
+            const bladeMat = new THREE.MeshStandardMaterial({ color: 0x55ffff, metalness: 0.8, roughness: 0.2 });
+            const blade = new THREE.Mesh(bladeGeo, bladeMat);
+            blade.position.y = 0.45;
+            swordMesh.add(blade);
+
+            const hiltGeo = new THREE.BoxGeometry(0.3, 0.06, 0.06);
+            const hiltMat = new THREE.MeshStandardMaterial({ color: 0x5c2204 });
+            const hilt = new THREE.Mesh(hiltGeo, hiltMat);
+            hilt.position.y = 0.02;
+            swordMesh.add(hilt);
+
+            swordMesh.position.set(0.35, -0.35, -0.5);
+            swordMesh.rotation.set(-0.2, -0.4, -0.3);
+            camera.add(swordMesh);
+
+            // Totem Model
+            heldTotemMesh = new THREE.Group();
+            const tBodyGeo = new THREE.BoxGeometry(0.25, 0.35, 0.15);
+            const tBodyMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.5 });
+            const tBody = new THREE.Mesh(tBodyGeo, tBodyMat);
+            heldTotemMesh.add(tBody);
+
+            heldTotemMesh.position.set(0.35, -0.35, -0.5);
+            heldTotemMesh.visible = false;
+            camera.add(heldTotemMesh);
+        }
+
+        // End Crystal Mesh (with spinning outer cube and inner core flame)
+        function createEndCrystalMesh() {
+            const crystalGroup = new THREE.Group();
+
+            // Obsidian Base
+            const baseGeo = new THREE.BoxGeometry(0.9, 0.25, 0.9);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x150b24, roughness: 0.3, metalness: 0.8 });
+            const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+            baseMesh.position.y = 0.125;
+            crystalGroup.add(baseMesh);
+
+            // Fire / Inner Core Glow
+            const coreGeo = new THREE.BoxGeometry(0.35, 0.55, 0.35);
+            const coreMat = new THREE.MeshBasicMaterial({ color: 0xff3300 });
+            const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+            coreMesh.position.y = 0.65;
+            crystalGroup.add(coreMesh);
+
+            const flameGeo = new THREE.SphereGeometry(0.22, 8, 8);
+            const flameMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+            const flameMesh = new THREE.Mesh(flameGeo, flameMat);
+            flameMesh.position.y = 0.65;
+            crystalGroup.add(flameMesh);
+
+            // Floating Outer Glass Crystal
+            const crystalGeo = new THREE.BoxGeometry(0.65, 0.65, 0.65);
+            const crystalMat = new THREE.MeshPhongMaterial({
+                color: 0xda70d6,
+                emissive: 0x8a2be2,
+                specular: 0xffffff,
+                shininess: 100,
+                transparent: true,
+                opacity: 0.85
+            });
+            const outerCrystal = new THREE.Mesh(crystalGeo, crystalMat);
+            outerCrystal.position.y = 0.85;
             
-            const mat1 = new THREE.MeshStandardMaterial({ color: 0x00aaff });
-            player1.mesh = new THREE.Mesh(geo, mat1);
-            scene.add(player1.mesh);
+            const wireframe = new THREE.LineSegments(
+                new THREE.EdgesGeometry(crystalGeo),
+                new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 })
+            );
+            outerCrystal.add(wireframe);
+            crystalGroup.add(outerCrystal);
 
-            const mat2 = new THREE.MeshStandardMaterial({ color: 0xff3333 });
-            player2.mesh = new THREE.Mesh(geo, mat2);
-            scene.add(player2.mesh);
+            crystalGroup.userData = {
+                outerCrystal: outerCrystal,
+                floatOffset: Math.random() * Math.PI * 2
+            };
+
+            return crystalGroup;
         }
 
-        function buildHeartsUI(containerId) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
-            for (let i = 0; i < 10; i++) {
-                const wrap = document.createElement('div');
-                wrap.className = 'heart-wrapper';
-                wrap.innerHTML = '<div class="pixel-heart"></div>';
-                container.appendChild(wrap);
+        function setupControls() {
+            document.addEventListener('keydown', (e) => {
+                switch (e.code) {
+                    case 'KeyW': moveForward = true; break;
+                    case 'KeyS': moveBackward = true; break;
+                    case 'KeyA': moveLeft = true; break;
+                    case 'KeyD': moveRight = true; break;
+                    case 'Space': if (canJump) { velocity.y += 11.0; canJump = false; } break;
+                    case 'Digit1': selectSlot(1); break;
+                    case 'Digit2': selectSlot(2); break;
+                    case 'Digit3': selectSlot(3); break;
+                    case 'Digit4': selectSlot(4); break;
+                    case 'Digit5': selectSlot(5); break;
+                }
+            });
+
+            document.addEventListener('keyup', (e) => {
+                switch (e.code) {
+                    case 'KeyW': moveForward = false; break;
+                    case 'KeyS': moveBackward = false; break;
+                    case 'KeyA': moveLeft = false; break;
+                    case 'KeyD': moveRight = false; break;
+                }
+            });
+
+            document.addEventListener('wheel', (e) => {
+                if (e.deltaY > 0) {
+                    selectSlot(currentSlot % 5 + 1);
+                } else {
+                    selectSlot((currentSlot - 2 + 5) % 5 + 1);
+                }
+            });
+        }
+
+        function selectSlot(slotNum) {
+            currentSlot = slotNum;
+            for (let i = 1; i <= 5; i++) {
+                const el = document.getElementById(`slot-${i}`);
+                if (i === slotNum) el.classList.add('active');
+                else el.classList.remove('active');
+            }
+
+            // Update held item visibility
+            swordMesh.visible = (currentSlot === 1);
+            heldTotemMesh.visible = (currentSlot === 5);
+        }
+
+        function setupMouseInteraction() {
+            document.addEventListener('mousedown', (e) => {
+                if (!controls.isLocked) return;
+
+                if (e.button === 0) {
+                    handleLeftClick();
+                } else if (e.button === 2) {
+                    handleRightClick();
+                }
+            });
+        }
+
+        function swingSwordAnimation() {
+            playSound('sword');
+            swordMesh.rotation.x -= 0.6;
+            swordMesh.position.z -= 0.1;
+            setTimeout(() => {
+                swordMesh.rotation.set(-0.2, -0.4, -0.3);
+                swordMesh.position.set(0.35, -0.35, -0.5);
+            }, 120);
+        }
+
+        function handleLeftClick() {
+            if (currentSlot === 1) {
+                swingSwordAnimation();
+            }
+
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+
+            // 1. Check End Crystal hit
+            const crystalHits = raycaster.intersectObjects(endCrystals, true);
+            if (crystalHits.length > 0) {
+                let hitObj = crystalHits[0].object;
+                while (hitObj.parent && hitObj.parent !== scene) {
+                    hitObj = hitObj.parent;
+                }
+                detonateCrystal(hitObj);
+                return;
+            }
+
+            // 2. Check Target Dummy hit
+            const dummyHits = raycaster.intersectObjects(dummyTargets.map(d => d.children[0]), true);
+            if (dummyHits.length > 0) {
+                const dummy = dummyHits[0].object.parent;
+                dummy.position.x += (Math.random() - 0.5) * 0.4;
+                dummy.position.z += (Math.random() - 0.5) * 0.4;
+                showActionText("Hit Dummy Target! -3 HP");
             }
         }
 
-        function updateHeartsDisplay(p) {
-            const container = document.getElementById(p.id === 1 ? 'p1-hearts' : 'p2-hearts');
+        function handleRightClick() {
+            // Slot 2: Golden Apple
+            if (currentSlot === 2) {
+                eatGoldenApple();
+                return;
+            }
+
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const intersects = raycaster.intersectObjects(placeableObjects, false);
+
+            if (intersects.length > 0 && intersects[0].distance <= 6.5) {
+                const hit = intersects[0];
+                const point = hit.point.clone().add(hit.face.normal.clone().multiplyScalar(0.5));
+                const gridX = Math.round(point.x);
+                const gridY = Math.round(point.y);
+                const gridZ = Math.round(point.z);
+
+                // Slot 4: Obsidian
+                if (currentSlot === 4 && counts.obsidian > 0) {
+                    placeObsidianBlock(gridX, gridY, gridZ);
+                }
+                // Slot 3: End Crystal
+                else if (currentSlot === 3 && counts.crystal > 0) {
+                    placeEndCrystal(gridX, gridY, gridZ);
+                }
+            }
+        }
+
+        function placeObsidianBlock(x, y, z) {
+            const obsGeo = new THREE.BoxGeometry(1, 1, 1);
+            const obsMat = new THREE.MeshStandardMaterial({ color: 0x1a0d2b, roughness: 0.2, metalness: 0.5 });
+            const obsMesh = new THREE.Mesh(obsGeo, obsMat);
+            obsMesh.position.set(x, y, z);
+            obsMesh.name = "obsidian";
+            
+            scene.add(obsMesh);
+            placeableObjects.push(obsMesh);
+
+            counts.obsidian--;
+            document.getElementById('obsidian-count').innerText = counts.obsidian;
+            playSound('place');
+        }
+
+        function placeEndCrystal(x, y, z) {
+            const crystalMesh = createEndCrystalMesh();
+            crystalMesh.position.set(x, y - 0.5, z);
+            
+            scene.add(crystalMesh);
+            endCrystals.push(crystalMesh);
+
+            counts.crystal--;
+            document.getElementById('crystal-count').innerText = counts.crystal;
+            playSound('place');
+        }
+
+        function eatGoldenApple() {
+            if (counts.gapple <= 0) return;
+
+            if (playerHealth < maxHealth) {
+                playerHealth = Math.min(maxHealth, playerHealth + 4);
+                updateHeartsUI();
+                counts.gapple--;
+                document.getElementById('gapple-count').innerText = counts.gapple;
+                playSound('eat');
+                showActionText("Ate Golden Apple! +4 Hearts");
+            } else {
+                showActionText("Health is full!");
+            }
+        }
+
+        function triggerTotemPop() {
+            counts.totem--;
+            document.getElementById('totem-count').innerText = counts.totem;
+
+            playerHealth = 4; // Auto-revive to 4 hearts
+            updateHeartsUI();
+
+            playSound('totem');
+            showActionText("TOTEM POPPED! Revived!");
+
+            const totemUI = document.getElementById('totem-pop-overlay');
+            totemUI.classList.add('active');
+            setTimeout(() => totemUI.classList.remove('active'), 800);
+        }
+
+        function detonateCrystal(crystalGroup) {
+            const pos = crystalGroup.position.clone().add(new THREE.Vector3(0, 0.85, 0));
+
+            scene.remove(crystalGroup);
+            const index = endCrystals.indexOf(crystalGroup);
+            if (index > -1) endCrystals.splice(index, 1);
+
+            playSound('explode');
+            triggerScreenFlash();
+            createExplosionParticles(pos);
+
+            // Damage player
+            const playerPos = controls.getObject().position;
+            const dist = playerPos.distanceTo(pos);
+
+            if (dist < 8.0) {
+                const damage = Math.round((1 - dist / 8.0) * 8);
+                playerHealth -= damage;
+
+                if (playerHealth <= 0) {
+                    if (counts.totem > 0) {
+                        triggerTotemPop();
+                    } else {
+                        playerHealth = 0;
+                        updateHeartsUI();
+                        showActionText("You Died to End Crystal Explosion!");
+                        setTimeout(respawnPlayer, 1500);
+                    }
+                } else {
+                    updateHeartsUI();
+                }
+
+                // Knockback
+                const knockbackDir = playerPos.clone().sub(pos).normalize();
+                velocity.x += knockbackDir.x * 22.0;
+                velocity.z += knockbackDir.z * 22.0;
+                velocity.y += 8.0;
+            }
+
+            // Chain Explosions
+            for (let i = endCrystals.length - 1; i >= 0; i--) {
+                const other = endCrystals[i];
+                if (other.position.distanceTo(pos) < 5.0) {
+                    setTimeout(() => detonateCrystal(other), 80);
+                }
+            }
+        }
+
+        function createExplosionParticles(pos) {
+            const pCount = 60;
+            const pGeo = new THREE.BufferGeometry();
+            const positions = [];
+            const velocities = [];
+
+            for (let i = 0; i < pCount; i++) {
+                positions.push(pos.x, pos.y, pos.z);
+                velocities.push(
+                    (Math.random() - 0.5) * 14,
+                    (Math.random() - 0.2) * 14,
+                    (Math.random() - 0.5) * 14
+                );
+            }
+
+            pGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            const pMat = new THREE.PointsMaterial({ color: 0xffaa00, size: 0.45, transparent: true });
+            const pSystem = new THREE.Points(pGeo, pMat);
+
+            scene.add(pSystem);
+            particles.push({ system: pSystem, velocities: velocities, age: 0 });
+        }
+
+        function triggerScreenFlash() {
+            const flash = document.getElementById('flash-overlay');
+            flash.style.background = 'rgba(255, 255, 255, 0.85)';
+            setTimeout(() => { flash.style.background = 'rgba(255, 255, 255, 0)'; }, 80);
+        }
+
+        function updateHeartsUI() {
+            const container = document.getElementById('hearts-container');
             const hearts = container.getElementsByClassName('pixel-heart');
             for (let i = 0; i < 10; i++) {
-                if (i < p.health) hearts[i].classList.remove('empty');
+                if (i < playerHealth) hearts[i].classList.remove('empty');
                 else hearts[i].classList.add('empty');
             }
         }
 
-        function setupInputListeners() {
-            document.addEventListener('keydown', (e) => {
-                // Player 1
-                if (e.code === 'KeyW') player1.keys.fwd = true;
-                if (e.code === 'KeyS') player1.keys.bwd = true;
-                if (e.code === 'KeyA') player1.keys.left = true;
-                if (e.code === 'KeyD') player1.keys.right = true;
-                if (e.code === 'Space' && player1.position.y <= 2.1) player1.velocity.y += 10;
-
-                if (['Digit1','Digit2','Digit3','Digit4','Digit5'].includes(e.code)) {
-                    selectSlot(player1, parseInt(e.code.replace('Digit','')));
-                }
-
-                // Player 2
-                if (e.code === 'ArrowUp') player2.keys.fwd = true;
-                if (e.code === 'ArrowDown') player2.keys.bwd = true;
-                if (e.code === 'ArrowLeft') player2.keys.left = true;
-                if (e.code === 'ArrowRight') player2.keys.right = true;
-                if (e.code === 'ShiftRight' && player2.position.y <= 2.1) player2.velocity.y += 10;
-
-                if (e.code === 'KeyU') selectSlot(player2, 1);
-                if (e.code === 'KeyI') selectSlot(player2, 2);
-                if (e.code === 'KeyO') selectSlot(player2, 3);
-                if (e.code === 'KeyP') selectSlot(player2, 4);
-                if (e.code === 'KeyL') selectSlot(player2, 5);
-
-                // P2 Actions
-                if (e.code === 'KeyM') performAction(player2, 'attack');
-                if (e.code === 'KeyK') performAction(player2, 'use');
-            });
-
-            document.addEventListener('keyup', (e) => {
-                if (e.code === 'KeyW') player1.keys.fwd = false;
-                if (e.code === 'KeyS') player1.keys.bwd = false;
-                if (e.code === 'KeyA') player1.keys.left = false;
-                if (e.code === 'KeyD') player1.keys.right = false;
-
-                if (e.code === 'ArrowUp') player2.keys.fwd = false;
-                if (e.code === 'ArrowDown') player2.keys.bwd = false;
-                if (e.code === 'ArrowLeft') player2.keys.left = false;
-                if (e.code === 'ArrowRight') player2.keys.right = false;
-            });
-
-            document.addEventListener('mousedown', (e) => {
-                if (!controlsP1.isLocked) return;
-                if (e.button === 0) performAction(player1, 'attack');
-                if (e.button === 2) performAction(player1, 'use');
-            });
+        function showActionText(msg) {
+            const txt = document.getElementById('action-text');
+            txt.innerText = msg;
+            txt.style.opacity = 1;
+            setTimeout(() => { txt.style.opacity = 0; }, 1500);
         }
 
-        function selectSlot(p, slotNum) {
-            p.slot = slotNum;
-            const prefix = p.id === 1 ? 'p1' : 'p2';
-            for (let i = 1; i <= 5; i++) {
-                const el = document.getElementById(`${prefix}-slot-${i}`);
-                if (i === slotNum) el.classList.add('active');
-                else el.classList.remove('active');
-            }
-        }
-
-        function performAction(p, type) {
-            if (type === 'use' && p.slot === 2 && p.counts.gapple > 0) {
-                // Eat Gapple
-                p.health = Math.min(p.maxHealth, p.health + 4);
-                p.counts.gapple--;
-                document.getElementById(p.id === 1 ? 'p1-gapple' : 'p2-gapple').innerText = p.counts.gapple;
-                updateHeartsDisplay(p);
-            }
-        }
-
-        function onWindowResize() {
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            p1Camera.aspect = (window.innerWidth / 2) / window.innerHeight;
-            p1Camera.updateProjectionMatrix();
-            p2Camera.aspect = (window.innerWidth / 2) / window.innerHeight;
-            p2Camera.updateProjectionMatrix();
+        function respawnPlayer() {
+            playerHealth = maxHealth;
+            counts.totem = 1;
+            document.getElementById('totem-count').innerText = counts.totem;
+            updateHeartsUI();
+            controls.getObject().position.set(0, 3, 0);
+            velocity.set(0, 0, 0);
+            showActionText("Respawned!");
         }
 
         function animate() {
@@ -319,52 +781,59 @@
             const time = performance.now();
             const delta = (time - prevTime) / 1000;
 
-            // Player Physics & Movement Logic
-            [player1, player2].forEach((p) => {
-                p.velocity.x -= p.velocity.x * 10.0 * delta;
-                p.velocity.z -= p.velocity.z * 10.0 * delta;
-                p.velocity.y -= 9.8 * 22.0 * delta;
+            if (controls.isLocked) {
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+                velocity.y -= 9.8 * 25.0 * delta;
 
-                const fwd = Number(p.keys.fwd) - Number(p.keys.bwd);
-                const side = Number(p.keys.right) - Number(p.keys.left);
+                const dirZ = Number(moveForward) - Number(moveBackward);
+                const dirX = Number(moveRight) - Number(moveLeft);
+                if (moveForward || moveBackward) velocity.z -= dirZ * 45.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= dirX * 45.0 * delta;
 
-                if (fwd || side) {
-                    p.velocity.z -= fwd * 35.0 * delta;
-                    p.velocity.x -= side * 35.0 * delta;
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
+                controls.getObject().position.y += (velocity.y * delta);
+
+                if (controls.getObject().position.y < 2.0) {
+                    velocity.y = 0;
+                    controls.getObject().position.y = 2.0;
+                    canJump = true;
                 }
+            }
 
-                p.position.x += p.velocity.x * delta;
-                p.position.z += p.velocity.z * delta;
-                p.position.y += p.velocity.y * delta;
-
-                if (p.position.y < 2.0) {
-                    p.velocity.y = 0;
-                    p.position.y = 2.0;
+            // Animate Floating End Crystals
+            const t = time * 0.003;
+            endCrystals.forEach((crystal) => {
+                const data = crystal.userData;
+                if (data && data.outerCrystal) {
+                    data.outerCrystal.rotation.y += 0.03;
+                    data.outerCrystal.rotation.x = Math.sin(t + data.floatOffset) * 0.2;
+                    data.outerCrystal.position.y = 0.85 + Math.sin(t * 2 + data.floatOffset) * 0.08;
                 }
-
-                if (p.mesh) p.mesh.position.copy(p.position);
             });
 
-            // Camera Tracking
-            p1Camera.position.copy(player1.position);
-            p2Camera.position.copy(player2.position);
-            p2Camera.lookAt(player1.position);
+            // Animate Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.age += delta;
+                const posArr = p.system.geometry.attributes.position.array;
 
-            // Render Split-Screen
-            const width = window.innerWidth / 2;
-            const height = window.innerHeight;
+                for (let j = 0; j < posArr.length; j += 3) {
+                    posArr[j] += p.velocities[j] * delta;
+                    posArr[j + 1] += p.velocities[j + 1] * delta;
+                    posArr[j + 2] += p.velocities[j + 2] * delta;
+                }
+                p.system.geometry.attributes.position.needsUpdate = true;
 
-            // Render Left Side (P1)
-            renderer.setViewport(0, 0, width, height);
-            renderer.setScissor(0, 0, width, height);
-            renderer.render(scene, p1Camera);
-
-            // Render Right Side (P2)
-            renderer.setViewport(width, 0, width, height);
-            renderer.setScissor(width, 0, width, height);
-            renderer.render(scene, p2Camera);
+                if (p.age > 0.5) {
+                    scene.remove(p.system);
+                    particles.splice(i, 1);
+                }
+            }
 
             prevTime = time;
+            renderer.render(scene, camera);
         }
 
         window.onload = init;

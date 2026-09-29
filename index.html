@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Donut SMP - End Crystal PvP (Mobile & PC)</title>
+    <title>Donut SMP - End Crystal PvP (Mobile, AI & Multiplayer)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
@@ -102,12 +102,17 @@
         #action-text { position: absolute; top: 60%; left: 50%; transform: translateX(-50%); color: #ffeb3b; font-size: 16px; font-weight: bold; text-shadow: 2px 2px #000; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 5; }
 
         /* Start Screen Blocker */
-        #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 10; cursor: pointer; }
+        #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 10; }
         #instructions { text-align: center; padding: 25px; background: rgba(20, 20, 20, 0.95); border: 3px solid #ff0055; box-shadow: 0 0 30px #ff0055; border-radius: 8px; max-width: 90%; width: 480px; }
+        
+        .mode-btn { margin: 8px 0; padding: 12px; width: 100%; background: #ff0055; color: #fff; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .mode-btn:hover { background: #ff3377; }
+        #room-input { width: 100%; padding: 10px; margin: 8px 0; text-align: center; font-size: 18px; border-radius: 5px; border: 2px solid #ffaa00; background: #222; color: #fff; }
     </style>
-    <!-- Three.js and PointerLockControls -->
+    <!-- Three.js, PointerLockControls & PeerJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
     <div id="game-container">
@@ -170,12 +175,18 @@
         <div id="blocker">
             <div id="instructions">
                 <h1 style="color:#ff0055; margin-bottom:10px; font-size: 22px;">DONUT SMP CRYSTAL PVP</h1>
-                <p style="color:#ffaa00; font-weight:bold; margin-bottom:12px; font-size: 15px;">Tap / Click to Play!</p>
-                <div style="text-align: left; background: #111; padding: 12px; border-radius: 5px; font-size: 12px; line-height: 1.5;">
-                    <p><b>Mobile Touch:</b> Left side Joystick to Move | Right side Touch-Drag to Look</p>
-                    <p><b>Mobile Buttons:</b> Tap JUMP, HIT (Break/Detonate), PLACE (Obsidian/Crystal)</p>
-                    <p><b>PC WASD / Space:</b> Walk / Jump</p>
-                    <p><b>Left / Right Click:</b> Hit / Place Block & Crystal</p>
+                <p style="color:#ffaa00; font-weight:bold; margin-bottom:12px; font-size: 15px;">Choose Mode to Play:</p>
+                
+                <button class="mode-btn" id="btn-mode-ai">1. PLAY VS STEVE AI BOT</button>
+                
+                <hr style="margin:10px 0; border:1px solid #444;">
+                
+                <input type="number" id="room-input" placeholder="Enter Room Code (e.g. 1234)" />
+                <button class="mode-btn" id="btn-mode-mp" style="background:#00aa55;">2. JOIN MULTIPLAYER ROOM</button>
+
+                <div style="text-align: left; background: #111; padding: 12px; margin-top:10px; border-radius: 5px; font-size: 11px; line-height: 1.4;">
+                    <p><b>Mobile:</b> Left Joystick (Move) | Right Drag (Look)</p>
+                    <p><b>Multiplayer Rules:</b> Enter exact same 4-digit code as your brother to join each other!</p>
                 </div>
             </div>
         </div>
@@ -201,12 +212,13 @@
         const maxHealth = 10;
         let textTimeout = null;
 
-        let counts = {
-            gapple: 64,
-            crystal: 64,
-            obsidian: 64,
-            totem: 1
-        };
+        let counts = { gapple: 64, crystal: 64, obsidian: 64, totem: 1 };
+
+        // Game Mode & Multiplayer
+        let gameMode = 'none'; // 'ai' or 'mp'
+        let peer, peerConn;
+        let remotePlayerMesh = null;
+        let aiSteveMesh = null, aiSteveTimer = 0;
 
         // Held Item Meshes
         let swordMesh, heldTotemMesh;
@@ -217,17 +229,15 @@
         const dummyTargets = [];
         const particleSystems = [];
 
-        // Audio Generator (Web Audio API)
+        // Audio Generator
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
         function playSound(type) {
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
             gain.connect(audioCtx.destination);
-
             const now = audioCtx.currentTime;
 
             if (type === 'explode') {
@@ -236,46 +246,39 @@
                 osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.6);
                 gain.gain.setValueAtTime(1.0, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
-                osc.start(now);
-                osc.stop(now + 0.6);
+                osc.start(now); osc.stop(now + 0.6);
             } else if (type === 'eat') {
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(320, now);
                 osc.frequency.exponentialRampToValueAtTime(650, now + 0.15);
                 gain.gain.setValueAtTime(0.4, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-                osc.start(now);
-                osc.stop(now + 0.15);
+                osc.start(now); osc.stop(now + 0.15);
             } else if (type === 'place') {
                 osc.type = 'square';
                 osc.frequency.setValueAtTime(120, now);
                 osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
                 gain.gain.setValueAtTime(0.4, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now);
-                osc.stop(now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
             } else if (type === 'sword') {
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(400, now);
                 osc.frequency.exponentialRampToValueAtTime(80, now + 0.12);
                 gain.gain.setValueAtTime(0.3, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
-                osc.start(now);
-                osc.stop(now + 0.12);
+                osc.start(now); osc.stop(now + 0.12);
             } else if (type === 'totem') {
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(200, now);
                 osc.frequency.exponentialRampToValueAtTime(800, now + 0.5);
                 gain.gain.setValueAtTime(0.8, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-                osc.start(now);
-                osc.stop(now + 0.5);
+                osc.start(now); osc.stop(now + 0.5);
             }
         }
 
-        function detectMobile() {
-            return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-        }
+        function detectMobile() { return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0); }
 
         function init() {
             isMobile = detectMobile();
@@ -287,7 +290,6 @@
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             raycaster = new THREE.Raycaster();
 
-            // Lighting
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
             scene.add(ambientLight);
 
@@ -301,21 +303,23 @@
             document.getElementById('game-container').appendChild(renderer.domElement);
 
             controls = new THREE.PointerLockControls(camera, document.body);
-            const blocker = document.getElementById('blocker');
 
-            blocker.addEventListener('click', () => { 
-                if (!isMobile) {
-                    controls.lock(); 
-                } else {
-                    blocker.style.display = 'none';
-                    document.getElementById('joystick-zone').style.display = 'block';
-                    document.getElementById('mobile-buttons').style.display = 'flex';
-                }
+            // Mode Selection Handlers
+            document.getElementById('btn-mode-ai').addEventListener('click', () => {
+                gameMode = 'ai';
+                startGame();
+                spawnAISteve();
             });
 
-            controls.addEventListener('lock', () => blocker.style.display = 'none');
-            controls.addEventListener('unlock', () => {
-                if (!isMobile) blocker.style.display = 'flex';
+            document.getElementById('btn-mode-mp').addEventListener('click', () => {
+                const roomCode = document.getElementById('room-input').value.trim();
+                if (!roomCode || roomCode.length < 3) {
+                    alert('Please enter a valid 4-digit code (e.g. 1234)!');
+                    return;
+                }
+                gameMode = 'mp';
+                startGame();
+                initMultiplayer(roomCode);
             });
 
             scene.add(controls.getObject());
@@ -327,12 +331,134 @@
             setupControls();
             setupMouseInteraction();
 
-            if (isMobile) {
-                setupMobileTouchControls();
-            }
+            if (isMobile) setupMobileTouchControls();
 
             window.addEventListener('resize', onWindowResize);
             animate();
+        }
+
+        function startGame() {
+            document.getElementById('blocker').style.display = 'none';
+            if (!isMobile) {
+                controls.lock();
+            } else {
+                document.getElementById('joystick-zone').style.display = 'block';
+                document.getElementById('mobile-buttons').style.display = 'flex';
+            }
+        }
+
+        /* --- AI Steve Bot Implementation --- */
+        function createStevePlayerMesh(color = 0x00aaff) {
+            const steveGroup = new THREE.Group();
+            const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.8, 8);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: color });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.9;
+            steveGroup.add(body);
+
+            const headGeo = new THREE.SphereGeometry(0.3, 8, 8);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xffcc99 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 2.0;
+            steveGroup.add(head);
+
+            return steveGroup;
+        }
+
+        function spawnAISteve() {
+            aiSteveMesh = createStevePlayerMesh(0x00ffaa);
+            aiSteveMesh.position.set(10, 0.5, 10);
+            scene.add(aiSteveMesh);
+            showActionText("AI Steve Bot Joined the Battle!");
+        }
+
+        function updateAISteveLogic(delta) {
+            if (!aiSteveMesh) return;
+
+            const playerPos = camera.position;
+            const dist = aiSteveMesh.position.distanceTo(playerPos);
+
+            // Move towards player
+            if (dist > 3.0) {
+                const dir = playerPos.clone().sub(aiSteveMesh.position).normalize();
+                aiSteveMesh.position.x += dir.x * 4.5 * delta;
+                aiSteveMesh.position.z += dir.z * 4.5 * delta;
+                aiSteveMesh.lookAt(playerPos.x, aiSteveMesh.position.y, playerPos.z);
+            }
+
+            // AI Crystal Attack Logic
+            aiSteveTimer += delta;
+            if (aiSteveTimer > 2.0) {
+                aiSteveTimer = 0;
+                const bx = Math.round(aiSteveMesh.position.x);
+                const bz = Math.round(aiSteveMesh.position.z);
+
+                placeObsidianBlock(bx, 1, bz);
+                placeEndCrystal(bx, 2, bz);
+
+                setTimeout(() => {
+                    endCrystals.forEach(c => {
+                        if (c.position.distanceTo(aiSteveMesh.position) < 3.0) {
+                            detonateCrystal(c);
+                        }
+                    });
+                }, 800);
+            }
+        }
+
+        /* --- PeerJS Device-to-Device Room Code Multiplayer --- */
+        function initMultiplayer(roomCode) {
+            const myPeerID = "donut-smp-" + roomCode + "-host";
+            const joinPeerID = "donut-smp-" + roomCode + "-join";
+
+            peer = new Peer(myPeerID);
+
+            peer.on('open', () => {
+                showActionText("Hosting Room Code: " + roomCode);
+            });
+
+            peer.on('error', (err) => {
+                // If Host ID exists, connect as Client to the host
+                peer = new Peer(joinPeerID);
+                peer.on('open', () => {
+                    peerConn = peer.connect(myPeerID);
+                    setupPeerEvents(peerConn);
+                    showActionText("Connected to Room " + roomCode + "!");
+                });
+            });
+
+            peer.on('connection', (conn) => {
+                peerConn = conn;
+                setupPeerEvents(peerConn);
+                showActionText("Brother Joined the Match!");
+            });
+
+            remotePlayerMesh = createStevePlayerMesh(0xff0055);
+            remotePlayerMesh.position.set(-10, 0.5, -10);
+            scene.add(remotePlayerMesh);
+        }
+
+        function setupPeerEvents(conn) {
+            conn.on('data', (data) => {
+                if (data.type === 'pos') {
+                    remotePlayerMesh.position.set(data.x, data.y - 1.5, data.z);
+                } else if (data.type === 'obsidian') {
+                    placeObsidianBlock(data.x, data.y, data.z);
+                } else if (data.type === 'crystal') {
+                    placeEndCrystal(data.x, data.y, data.z);
+                }
+            });
+        }
+
+        function broadcastPlayerPos() {
+            if (peerConn && peerConn.open) {
+                peerConn.send({
+                    type: 'pos',
+                    x: camera.position.x,
+                    y: camera.position.y,
+                    z: camera.position.z
+                });
+            }
         }
 
         function onWindowResize() {
@@ -444,26 +570,9 @@
         }
 
         function spawnDummyTargets() {
-            const dummyPositions = [
-                { x: 5, z: -5 },
-                { x: -6, z: -8 },
-                { x: 8, z: 6 }
-            ];
-
+            const dummyPositions = [ { x: 5, z: -5 }, { x: -6, z: -8 }, { x: 8, z: 6 } ];
             dummyPositions.forEach(p => {
-                const dummyGroup = new THREE.Group();
-                const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.8, 8);
-                const bodyMat = new THREE.MeshStandardMaterial({ color: 0x964B00 });
-                const body = new THREE.Mesh(bodyGeo, bodyMat);
-                body.position.y = 0.9;
-                dummyGroup.add(body);
-
-                const headGeo = new THREE.SphereGeometry(0.3, 8, 8);
-                const headMat = new THREE.MeshStandardMaterial({ color: 0xffcc99 });
-                const head = new THREE.Mesh(headGeo, headMat);
-                head.position.y = 2.0;
-                dummyGroup.add(head);
-
+                const dummyGroup = createStevePlayerMesh(0x964B00);
                 dummyGroup.position.set(p.x, 0.5, p.z);
                 dummyGroup.name = "dummy";
                 scene.add(dummyGroup);
@@ -523,12 +632,7 @@
 
             const crystalGeo = new THREE.BoxGeometry(0.65, 0.65, 0.65);
             const crystalMat = new THREE.MeshPhongMaterial({
-                color: 0xda70d6,
-                emissive: 0x8a2be2,
-                specular: 0xffffff,
-                shininess: 100,
-                transparent: true,
-                opacity: 0.85
+                color: 0xda70d6, emissive: 0x8a2be2, specular: 0xffffff, shininess: 100, transparent: true, opacity: 0.85
             });
             const outerCrystal = new THREE.Mesh(crystalGeo, crystalMat);
             outerCrystal.position.y = 0.85;
@@ -540,11 +644,7 @@
             outerCrystal.add(wireframe);
             crystalGroup.add(outerCrystal);
 
-            crystalGroup.userData = {
-                outerCrystal: outerCrystal,
-                floatOffset: Math.random() * Math.PI * 2
-            };
-
+            crystalGroup.userData = { outerCrystal: outerCrystal, floatOffset: Math.random() * Math.PI * 2 };
             return crystalGroup;
         }
 
@@ -574,19 +674,14 @@
             });
 
             document.addEventListener('wheel', (e) => {
-                if (e.deltaY > 0) {
-                    selectSlot(currentSlot % 5 + 1);
-                } else {
-                    selectSlot((currentSlot - 2 + 5) % 5 + 1);
-                }
+                if (e.deltaY > 0) selectSlot(currentSlot % 5 + 1);
+                else selectSlot((currentSlot - 2 + 5) % 5 + 1);
             });
         }
 
-        // Mobile Touch Events Implementation
         function setupMobileTouchControls() {
             const joystickZone = document.getElementById('joystick-zone');
             const joystickKnob = document.getElementById('joystick-knob');
-
             const rect = joystickZone.getBoundingClientRect();
             joystickCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
 
@@ -688,12 +783,8 @@
         function setupMouseInteraction() {
             document.addEventListener('mousedown', (e) => {
                 if (!controls.isLocked && !isMobile) return;
-
-                if (e.button === 0) {
-                    handleLeftClick();
-                } else if (e.button === 2) {
-                    handleRightClick();
-                }
+                if (e.button === 0) handleLeftClick();
+                else if (e.button === 2) handleRightClick();
             });
         }
 
@@ -708,18 +799,14 @@
         }
 
         function handleLeftClick() {
-            if (currentSlot === 1) {
-                swingSwordAnimation();
-            }
+            if (currentSlot === 1) swingSwordAnimation();
 
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
             const crystalHits = raycaster.intersectObjects(endCrystals, true);
             if (crystalHits.length > 0) {
                 let hitObj = crystalHits[0].object;
-                while (hitObj.parent && hitObj.parent !== scene) {
-                    hitObj = hitObj.parent;
-                }
+                while (hitObj.parent && hitObj.parent !== scene) hitObj = hitObj.parent;
                 detonateCrystal(hitObj);
                 return;
             }
@@ -729,15 +816,12 @@
                 const dummy = dummyHits[0].object.parent;
                 dummy.position.x += (Math.random() - 0.5) * 0.4;
                 dummy.position.z += (Math.random() - 0.5) * 0.4;
-                showActionText("Hit Dummy Target!");
+                showActionText("Hit Target!");
             }
         }
 
         function handleRightClick() {
-            if (currentSlot === 2) {
-                eatGoldenApple();
-                return;
-            }
+            if (currentSlot === 2) { eatGoldenApple(); return; }
 
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
             const intersects = raycaster.intersectObjects(placeableObjects, false);
@@ -751,8 +835,10 @@
 
                 if (currentSlot === 4 && counts.obsidian > 0) {
                     placeObsidianBlock(gridX, gridY, gridZ);
+                    if (peerConn && peerConn.open) peerConn.send({ type: 'obsidian', x: gridX, y: gridY, z: gridZ });
                 } else if (currentSlot === 3 && counts.crystal > 0) {
                     placeEndCrystal(gridX, gridY, gridZ);
+                    if (peerConn && peerConn.open) peerConn.send({ type: 'crystal', x: gridX, y: gridY, z: gridZ });
                 }
             }
         }
@@ -786,7 +872,6 @@
 
         function eatGoldenApple() {
             if (counts.gapple <= 0) return;
-
             if (playerHealth < maxHealth) {
                 playerHealth = Math.min(maxHealth, playerHealth + 4);
                 updateHeartsUI();
@@ -801,9 +886,7 @@
 
         function detonateCrystal(crystalObj) {
             const index = endCrystals.indexOf(crystalObj);
-            if (index > -1) {
-                endCrystals.splice(index, 1);
-            }
+            if (index > -1) endCrystals.splice(index, 1);
 
             const explosionPos = crystalObj.position.clone();
             scene.remove(crystalObj);
@@ -885,11 +968,8 @@
             const container = document.getElementById('hearts-container');
             const hearts = container.querySelectorAll('.pixel-heart');
             hearts.forEach((heart, idx) => {
-                if (idx < playerHealth) {
-                    heart.classList.remove('empty');
-                } else {
-                    heart.classList.add('empty');
-                }
+                if (idx < playerHealth) heart.classList.remove('empty');
+                else heart.classList.add('empty');
             });
         }
 
@@ -932,6 +1012,9 @@
                     controls.getObject().position.y = 2.5;
                     canJump = true;
                 }
+
+                if (gameMode === 'mp') broadcastPlayerPos();
+                if (gameMode === 'ai') updateAISteveLogic(delta);
             }
 
             endCrystals.forEach(c => {

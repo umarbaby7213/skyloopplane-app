@@ -3,133 +3,209 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minecraft 3D Voxel Arena</title>
+  <title>Donut SMP Style Crystal PvP Arena</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
-      font-family: sans-serif;
+      font-family: 'Courier New', Courier, monospace;
       user-select: none;
+      background: #111;
     }
     #crosshair {
       position: absolute;
       top: 50%;
       left: 50%;
-      width: 10px;
-      height: 10px;
-      margin-top: -5px;
-      margin-left: -5px;
+      width: 12px;
+      height: 12px;
+      margin-top: -6px;
+      margin-left: -6px;
       pointer-events: none;
     }
     #crosshair::before, #crosshair::after {
       content: '';
       position: absolute;
-      background: white;
+      background: rgba(255, 255, 255, 0.8);
     }
-    #crosshair::before { top: 4px; left: 0; width: 10px; height: 2px; }
-    #crosshair::after { top: 0; left: 4px; width: 2px; height: 10px; }
-    #ui {
+    #crosshair::before { top: 5px; left: 0; width: 12px; height: 2px; }
+    #crosshair::after { top: 0; left: 5px; width: 2px; height: 12px; }
+    
+    #hotbar {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      color: white;
-      text-shadow: 1px 1px 2px black;
-      font-size: 14px;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 6px;
+      border-radius: 4px;
+      border: 2px solid #444;
     }
+    .slot {
+      width: 45px;
+      height: 45px;
+      background: rgba(100, 100, 100, 0.4);
+      border: 2px solid #555;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 12px;
+      position: relative;
+    }
+    .slot.active {
+      border-color: white;
+      background: rgba(200, 200, 200, 0.3);
+    }
+    .slot span {
+      position: absolute;
+      bottom: 2px;
+      right: 4px;
+      font-size: 11px;
+      text-shadow: 1px 1px #000;
+    }
+
+    #health-bar {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #ff4444;
+      font-weight: bold;
+      font-size: 18px;
+      text-shadow: 2px 2px #000;
+    }
+
     #instructions {
       position: absolute;
-      top: 50%;
-      width: 100%;
-      text-align: center;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       color: white;
-      font-size: 24px;
-      text-shadow: 2px 2px 4px black;
+      text-align: center;
       cursor: pointer;
+      z-index: 10;
     }
+    #instructions h1 { color: #d946ef; text-shadow: 0 0 10px #a855f7; margin-bottom: 5px; }
+    #instructions p { color: #aaa; font-size: 16px; }
   </style>
 </head>
 <body>
   <div id="crosshair"></div>
-  <div id="ui">
-    <b>Controls:</b> WASD = Move | SPACE = Jump | Left Click = Break | Right Click = Place
+  <div id="health-bar">❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️ (20 HP)</div>
+  
+  <div id="hotbar">
+    <div class="slot active" id="slot-0">⚔️<span>1</span></div>
+    <div class="slot" id="slot-1">⬛<span>2</span></div>
+    <div class="slot" id="slot-2">🔮<span>3</span></div>
+    <div class="slot" id="slot-3">🧪<span>4</span></div>
+    <div class="slot" id="slot-4">🛡️<span>5</span></div>
   </div>
-  <div id="instructions">Click Anywhere to Play</div>
+
+  <div id="instructions">
+    <h1>DONUT SMP CRYSTAL ARENA</h1>
+    <p>Click Anywhere to Enter Arena<br><b>WASD</b> = Move | <b>Space</b> = Jump | <b>1-5</b> = Select Item | <b>Left Click</b> = Place/Attack</p>
+  </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
-    // Scene & Renderer Setup
+    // Scene, Camera, Renderer
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87ceeb);
+    scene.background = new THREE.Color(0x1a1a24); // Dark custom SMP sky
+    scene.fog = new THREE.FogExp2(0x1a1a24, 0.035);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
     document.body.appendChild(renderer.domElement);
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    dirLight.position.set(20, 40, 20);
-    scene.add(dirLight);
+    const sunLight = new THREE.DirectionalLight(0xd8b4fe, 0.8);
+    sunLight.position.set(10, 30, 10);
+    scene.add(sunLight);
 
-    // World Building
-    const blockSize = 1;
-    const arenaSize = 16;
+    // Build Donut SMP Style Arena (Obsidian & Deepslate walls)
     const blocks = new Map();
-    const boxGeo = new THREE.BoxGeometry(blockSize, blockSize, blockSize);
+    const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+    
+    const obsidianMat = new THREE.MeshStandardMaterial({ color: 0x110e1d, roughness: 0.3, metalness: 0.8 });
+    const deepslateMat = new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.9 });
+    const glowingMat = new THREE.MeshBasicMaterial({ color: 0xd946ef });
 
-    const grassMat = new THREE.MeshLambertMaterial({ color: 0x557a2b });
-    const wallMat = new THREE.MeshLambertMaterial({ color: 0x777777 });
-
-    function getPosKey(x, y, z) {
-      return `${Math.round(x)},${Math.round(y)},${Math.round(z)}`;
-    }
-
-    function addBlock(x, y, z, material) {
-      const mesh = new THREE.Mesh(boxGeo, material);
+    function addBlock(x, y, z, mat) {
+      const mesh = new THREE.Mesh(boxGeo, mat);
       mesh.position.set(x, y, z);
       scene.add(mesh);
-      blocks.set(getPosKey(x, y, z), mesh);
+      blocks.set(`${x},${y},${z}`, mesh);
     }
 
-    // Generate Arena Floor & Walls
-    for (let x = -arenaSize; x <= arenaSize; x++) {
-      for (let z = -arenaSize; z <= arenaSize; z++) {
-        addBlock(x, 0, z, grassMat);
-        if (Math.abs(x) === arenaSize || Math.abs(z) === arenaSize) {
-          for (let y = 1; y <= 4; y++) {
-            addBlock(x, y, z, wallMat);
+    // Arena Floor and Cages
+    const size = 12;
+    for (let x = -size; x <= size; x++) {
+      for (let z = -size; z <= size; z++) {
+        addBlock(x, 0, z, deepslateMat);
+        // Walls
+        if (Math.abs(x) === size || Math.abs(z) === size) {
+          for (let y = 1; y <= 5; y++) {
+            addBlock(x, y, z, (y === 3 ? obsidianMat : deepslateMat));
           }
         }
       }
     }
 
-    // Player Physics & Controls
+    // Center Crystal Monument (Like in the video)
+    const centerObsidian = new THREE.Mesh(boxGeo, obsidianMat);
+    centerObsidian.position.set(0, 1, 0);
+    scene.add(centerObsidian);
+
+    const crystalGeo = new THREE.OctahedronGeometry(0.6);
+    const crystalMat = new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0xaa00aa, roughness: 0.1 });
+    const centerCrystal = new THREE.Mesh(crystalGeo, crystalMat);
+    centerCrystal.position.set(0, 2.2, 0);
+    scene.add(centerCrystal);
+
+    // Player Physics & State
     const player = {
-      pos: new THREE.Vector3(0, 2, 0),
+      pos: new THREE.Vector3(0, 2, 6),
       vel: new THREE.Vector3(),
       onGround: false,
-      speed: 0.12,
-      gravity: -0.008,
-      jump: 0.18
+      speed: 0.13,
+      gravity: -0.007,
+      jump: 0.17,
+      selectedSlot: 0
     };
 
     const keys = {};
-    window.addEventListener('keydown', e => keys[e.code] = true);
+    window.addEventListener('keydown', e => {
+      keys[e.code] = true;
+      if (['Digit1','Digit2','Digit3','Digit4','Digit5'].includes(e.code)) {
+        player.selectedSlot = parseInt(e.code.replace('Digit','')) - 1;
+        updateHotbarUI();
+      }
+    });
     window.addEventListener('keyup', e => keys[e.code] = false);
 
-    // Pointer Lock Camera Controls
+    function updateHotbarUI() {
+      document.querySelectorAll('.slot').forEach((el, idx) => {
+        el.classList.toggle('active', idx === player.selectedSlot);
+      });
+    }
+
+    // Pointer Lock Controls
     const instructions = document.getElementById('instructions');
     let isLocked = false;
-
-    instructions.addEventListener('click', () => {
-      document.body.requestPointerLock();
-    });
-
+    instructions.addEventListener('click', () => document.body.requestPointerLock());
     document.addEventListener('pointerlockchange', () => {
       isLocked = document.pointerLockElement === document.body;
-      instructions.style.display = isLocked ? 'none' : 'block';
+      instructions.style.display = isLocked ? 'none' : 'flex';
     });
 
     let yaw = 0, pitch = 0;
@@ -137,53 +213,70 @@
       if (!isLocked) return;
       yaw -= e.movementX * 0.002;
       pitch -= e.movementY * 0.002;
-      pitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, pitch));
+      pitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, pitch));
     });
 
-    // Raycasting for Block Placement & Breaking
-    const raycaster = new THREE.Raycaster();
-    const mouseCenter = new THREE.Vector2(0, 0);
-
-    window.addEventListener('mousedown', e => {
+    // Crystal Placement & Explosion Interaction
+    const explosions = [];
+    window.addEventListener('mousedown', () => {
       if (!isLocked) return;
-      raycaster.setFromCamera(mouseCenter, camera);
-      const intersects = raycaster.intersectObjects(Array.from(blocks.values()));
-
-      if (intersects.length > 0) {
-        const hit = intersects[0];
-        if (e.button === 0) { // Left Click: Break Block
-          scene.remove(hit.object);
-          for (let [key, val] of blocks.entries()) {
-            if (val === hit.object) {
-              blocks.delete(key);
-              break;
-            }
-          }
-        } else if (e.button === 2) { // Right Click: Place Block
-          const p = hit.point.clone().add(hit.face.normal.clone().multiplyScalar(0.5));
-          const nx = Math.round(p.x);
-          const ny = Math.round(p.y);
-          const nz = Math.round(p.z);
-          if (!blocks.has(getPosKey(nx, ny, nz))) {
-            addBlock(nx, ny, nz, grassMat);
+      
+      // Slot 2 or 3: Place Obsidian or End Crystal simulation
+      if (player.selectedSlot === 1 || player.selectedSlot === 2) {
+        const placePos = new THREE.Vector3(0, 0, -2).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw).add(player.pos);
+        const nx = Math.round(placePos.x);
+        const ny = Math.max(1, Math.round(placePos.y));
+        const nz = Math.round(placePos.z);
+        
+        const key = `${nx},${ny},${nz}`;
+        if (!blocks.has(key)) {
+          if (player.selectedSlot === 1) {
+            addBlock(nx, ny, nz, obsidianMat);
+          } else {
+            // Spawn mini Crystal
+            const cMesh = new THREE.Mesh(crystalGeo, crystalMat);
+            cMesh.position.set(nx, ny + 0.6, nz);
+            scene.add(cMesh);
+            setTimeout(() => {
+              scene.remove(cMesh);
+              // Create Explosion flash
+              createExplosion(nx, ny, nz);
+            }, 800);
           }
         }
       }
     });
 
-    document.addEventListener('contextmenu', e => e.preventDefault());
+    function createExplosion(x, y, z) {
+      const expGeo = new THREE.SphereGeometry(0.2, 8, 8);
+      const expMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+      const fireball = new THREE.Mesh(expGeo, expMat);
+      fireball.position.set(x, y, z);
+      scene.add(fireball);
+      
+      let scale = 1;
+      const expand = setInterval(() => {
+        scale += 0.8;
+        fireball.scale.set(scale, scale, scale);
+        if (scale > 8) {
+          clearInterval(expand);
+          scene.remove(fireball);
+        }
+      }, 30);
+    }
 
-    // Game Loop
+    // Animation Loop
     function animate() {
       requestAnimationFrame(animate);
 
+      // Rotate center crystal for aesthetics
+      centerCrystal.rotation.y += 0.03;
+
       if (isLocked) {
-        // Rotation
         camera.rotation.order = 'YXZ';
         camera.rotation.y = yaw;
         camera.rotation.x = pitch;
 
-        // Movement Vectors
         const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
         const side = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
 
@@ -196,7 +289,6 @@
         player.pos.x += moveX * player.speed;
         player.pos.z += moveZ * player.speed;
 
-        // Gravity & Ground Collision
         player.vel.y += player.gravity;
         player.pos.y += player.vel.y;
 
@@ -212,6 +304,7 @@
         }
 
         camera.position.copy(player.pos);
+        camera.position.y += 0.4; // Eye level
       }
 
       renderer.render(scene, camera);

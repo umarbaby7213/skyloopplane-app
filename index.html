@@ -2,17 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Donut SMP - 2 Player Crystal PvP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Donut SMP - Steve Crystal PvP (Mobile & AI)</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
         
         #game-view { display: flex; width: 100vw; height: 100vh; position: relative; }
-        .player-viewport { width: 50vw; height: 100vh; position: relative; border-right: 2px solid #222; overflow: hidden; }
-        .player-viewport:last-child { border-right: none; }
+        .player-viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+        .split-screen .player-viewport { width: 50vw; border-right: 2px solid #222; }
 
-        /* Crosshairs */
+        /* Crosshair */
         .crosshair { position: absolute; top: 50%; left: 50%; width: 16px; height: 16px; transform: translate(-50%, -50%); pointer-events: none; z-index: 5; }
         .crosshair::before, .crosshair::after { content: ''; position: absolute; background: rgba(255, 255, 255, 0.9); box-shadow: 0 0 2px #000; }
         .crosshair::before { left: 7px; top: 0; width: 2px; height: 16px; }
@@ -41,53 +41,55 @@
         }
         .pixel-heart.empty { opacity: 0.2; }
 
-        .hotbar { display: flex; background: rgba(0, 0, 0, 0.7); border: 3px solid #3c3c3c; border-radius: 4px; }
-        .slot { width: 44px; height: 44px; border: 2px solid #8b8b8b; background: rgba(139, 139, 139, 0.3); margin: 2px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 18px; position: relative; }
+        .hotbar { display: flex; background: rgba(0, 0, 0, 0.7); border: 3px solid #3c3c3c; border-radius: 4px; pointer-events: auto; }
+        .slot { width: 44px; height: 44px; border: 2px solid #8b8b8b; background: rgba(139, 139, 139, 0.3); margin: 2px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 18px; position: relative; cursor: pointer; }
         .slot.active { border-color: #ffffff; background: rgba(255, 255, 255, 0.4); box-shadow: inset 0 0 6px #fff; }
-        .slot-num { position: absolute; top: 2px; left: 3px; font-size: 9px; color: #aaa; }
         .count-badge { position: absolute; bottom: 2px; right: 3px; font-size: 10px; color: #fff; text-shadow: 1px 1px #000; }
 
+        /* Mobile Controls UI */
+        .mobile-controls { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 8; display: none; }
+        .touch-zone { position: absolute; bottom: 20px; left: 20px; width: 120px; height: 120px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); border-radius: 60px; pointer-events: auto; }
+        .touch-knob { position: absolute; top: 35px; left: 35px; width: 50px; height: 50px; background: rgba(255,255,255,0.5); border-radius: 25px; }
+        
+        .action-btns { position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
+        .btn-touch { width: 60px; height: 60px; background: rgba(0,0,0,0.6); border: 2px solid #fff; border-radius: 30px; color: #fff; font-weight: bold; font-size: 14px; display: flex; justify-content: center; align-items: center; }
+        .btn-touch:active { background: rgba(255,255,255,0.4); }
+
         /* Start Overlay */
-        #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.88); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 10; cursor: pointer; }
-        #instructions { text-align: center; padding: 25px; background: rgba(20, 20, 20, 0.95); border: 3px solid #ff0055; box-shadow: 0 0 30px #ff0055; border-radius: 8px; max-width: 600px; }
+        #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 10; }
+        #instructions { text-align: center; padding: 25px; background: rgba(20, 20, 20, 0.95); border: 3px solid #00aaff; box-shadow: 0 0 30px #00aaff; border-radius: 8px; max-width: 550px; width: 90%; }
+        .mode-btn { background: #00aaff; color: #fff; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; margin: 10px; border-radius: 5px; cursor: pointer; transition: 0.2s; }
+        .mode-btn:hover { background: #0088cc; transform: scale(1.05); }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
 </head>
 <body>
     <div id="game-view">
-        <!-- Player 1 Viewport -->
+        <!-- Player Viewport -->
         <div class="player-viewport" id="p1-viewport">
-            <div class="player-tag" style="color: #55ffff;">P1: Blue</div>
+            <div class="player-tag" id="p1-tag" style="color: #55ffff;">Player 1 (Steve)</div>
             <div class="crosshair"></div>
             <div class="hud">
                 <div class="status-wrapper">
                     <div class="hearts-bar" id="p1-hearts"></div>
                 </div>
                 <div class="hotbar">
-                    <div class="slot active" id="p1-slot-1"><span class="slot-num">1</span>🗡️</div>
-                    <div class="slot" id="p1-slot-2"><span class="slot-num">2</span>🍏<span class="count-badge" id="p1-gapple">64</span></div>
-                    <div class="slot" id="p1-slot-3"><span class="slot-num">3</span>🔮<span class="count-badge" id="p1-crystal">64</span></div>
-                    <div class="slot" id="p1-slot-4"><span class="slot-num">4</span>⬛<span class="count-badge" id="p1-obsidian">64</span></div>
-                    <div class="slot" id="p1-slot-5"><span class="slot-num">5</span>🗿<span class="count-badge" id="p1-totem">1</span></div>
+                    <div class="slot active" onclick="selectSlot(player1, 1)" id="p1-slot-1">🗡️</div>
+                    <div class="slot" onclick="selectSlot(player1, 2)" id="p1-slot-2">🍏<span class="count-badge" id="p1-gapple">64</span></div>
+                    <div class="slot" onclick="selectSlot(player1, 3)" id="p1-slot-3">🔮<span class="count-badge" id="p1-crystal">64</span></div>
+                    <div class="slot" onclick="selectSlot(player1, 4)" id="p1-slot-4">⬛<span class="count-badge" id="p1-obsidian">64</span></div>
+                    <div class="slot" onclick="selectSlot(player1, 5)" id="p1-slot-5">🗿<span class="count-badge" id="p1-totem">1</span></div>
                 </div>
             </div>
-        </div>
 
-        <!-- Player 2 Viewport -->
-        <div class="player-viewport" id="p2-viewport">
-            <div class="player-tag" style="color: #ff5555;">P2: Red</div>
-            <div class="crosshair"></div>
-            <div class="hud">
-                <div class="status-wrapper">
-                    <div class="hearts-bar" id="p2-hearts"></div>
-                </div>
-                <div class="hotbar">
-                    <div class="slot active" id="p2-slot-1"><span class="slot-num">U</span>🗡️</div>
-                    <div class="slot" id="p2-slot-2"><span class="slot-num">I</span>🍏<span class="count-badge" id="p2-gapple">64</span></div>
-                    <div class="slot" id="p2-slot-3"><span class="slot-num">O</span>🔮<span class="count-badge" id="p2-crystal">64</span></div>
-                    <div class="slot" id="p2-slot-4"><span class="slot-num">P</span>⬛<span class="count-badge" id="p2-obsidian">64</span></div>
-                    <div class="slot" id="p2-slot-5"><span class="slot-num">L</span>🗿<span class="count-badge" id="p2-totem">1</span></div>
+            <!-- Mobile Overlay Controls -->
+            <div class="mobile-controls" id="mobile-ui">
+                <div class="touch-zone" id="joystick-zone"><div class="touch-knob" id="joystick-knob"></div></div>
+                <div class="action-btns">
+                    <div class="btn-touch" id="btn-jump">JUMP</div>
+                    <div class="btn-touch" id="btn-attack" style="border-color:#ff3333;">HIT</div>
+                    <div class="btn-touch" id="btn-use" style="border-color:#55ffff;">USE</div>
                 </div>
             </div>
         </div>
@@ -95,56 +97,45 @@
         <!-- Start Screen Overlay -->
         <div id="blocker">
             <div id="instructions">
-                <h1 style="color:#ff0055; margin-bottom:10px;">DONUT SMP - 2 PLAYER CRYSTAL PVP</h1>
-                <p style="color:#ffaa00; font-size:16px; margin-bottom:15px; font-weight:bold;">Click Anywhere to Play Split-Screen!</p>
-                <div style="display:flex; justify-content:space-between; gap:15px; text-align:left; background:#111; padding:12px; border-radius:5px; font-size:12px;">
-                    <div>
-                        <h3 style="color:#55ffff;">PLAYER 1 (Left)</h3>
-                        <p><b>WASD</b> : Move</p>
-                        <p><b>SPACE</b> : Jump</p>
-                        <p><b>Mouse</b> : Look around</p>
-                        <p><b>Left Click</b> : Attack / Explode</p>
-                        <p><b>Right Click</b> : Place / Eat Gapple</p>
-                        <p><b>1 - 5</b> : Hotbar Select</p>
-                    </div>
-                    <div style="border-left:1px solid #444; padding-left:15px;">
-                        <h3 style="color:#ff5555;">PLAYER 2 (Right)</h3>
-                        <p><b>ARROWS</b> : Move</p>
-                        <p><b>RIGHT SHIFT</b> : Jump</p>
-                        <p><b>M Key</b> : Attack / Explode</p>
-                        <p><b>K Key</b> : Place / Eat Gapple</p>
-                        <p><b>U, I, O, P, L</b> : Hotbar Select</p>
-                    </div>
+                <h1 style="color:#00aaff; margin-bottom:10px;">DONUT SMP - STEVE CRYSTAL PVP</h1>
+                <p style="color:#ffaa00; font-size:14px; margin-bottom:15px; font-weight:bold;">Smooth Physics • Mobile & Keyboard • Steve Skin</p>
+                
+                <div>
+                    <button class="mode-btn" onclick="startGame(false)">1 PLAYER VS AI BOT</button>
+                    <button class="mode-btn" style="background:#ff0055;" onclick="startGame(true)">2 PLAYER SPLIT-SCREEN</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        let scene, renderer, controlsP1;
+        let scene, renderer, controlsP1, isMultiplayer = false, isMobile = false;
         let p1Camera, p2Camera;
 
-        const endCrystals = [];
         const placeableObjects = [];
 
-        // Players State
+        // Player States
         const player1 = {
-            id: 1, health: 10, maxHealth: 10, position: new THREE.Vector3(-6, 3, 0), velocity: new THREE.Vector3(),
+            id: 1, health: 10, maxHealth: 10, position: new THREE.Vector3(-5, 2, 0), velocity: new THREE.Vector3(),
             mesh: null, slot: 1, counts: { gapple: 64, crystal: 64, obsidian: 64, totem: 1 },
-            keys: { fwd: false, bwd: false, left: false, right: false, jump: false }
+            keys: { fwd: false, bwd: false, left: false, right: false }
         };
 
-        const player2 = {
-            id: 2, health: 10, maxHealth: 10, position: new THREE.Vector3(6, 3, 0), velocity: new THREE.Vector3(),
+        const opponent = {
+            id: 2, isAI: true, health: 10, maxHealth: 10, position: new THREE.Vector3(5, 2, 0), velocity: new THREE.Vector3(),
             mesh: null, slot: 1, counts: { gapple: 64, crystal: 64, obsidian: 64, totem: 1 },
-            keys: { fwd: false, bwd: false, left: false, right: false, jump: false }
+            keys: { fwd: false, bwd: false, left: false, right: false }
         };
 
         let prevTime = performance.now();
 
         function init() {
+            // Detect Mobile
+            isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+            if (isMobile) document.getElementById('mobile-ui').style.display = 'block';
+
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x5c88c7);
+            scene.background = new THREE.Color(0x6eb1ff);
 
             // Lighting
             scene.add(new THREE.AmbientLight(0xffffff, 0.7));
@@ -152,32 +143,58 @@
             sun.position.set(50, 100, 50);
             scene.add(sun);
 
-            // Cameras for Split-Screen
-            p1Camera = new THREE.PerspectiveCamera(75, (window.innerWidth / 2) / window.innerHeight, 0.1, 1000);
-            p2Camera = new THREE.PerspectiveCamera(75, (window.innerWidth / 2) / window.innerHeight, 0.1, 1000);
-
+            p1Camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setScissorTest(true);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.getElementById('game-view').appendChild(renderer.domElement);
 
-            // Pointer Lock for P1
             controlsP1 = new THREE.PointerLockControls(p1Camera, document.body);
-            const blocker = document.getElementById('blocker');
-            blocker.addEventListener('click', () => controlsP1.lock());
-            controlsP1.addEventListener('lock', () => blocker.style.display = 'none');
-            controlsP1.addEventListener('unlock', () => blocker.style.display = 'flex');
-
-            scene.add(controlsP1.getObject());
 
             createArena();
-            createPlayerMeshes();
             buildHeartsUI('p1-hearts');
-            buildHeartsUI('p2-hearts');
             setupInputListeners();
+            setupTouchEvents();
 
             window.addEventListener('resize', onWindowResize);
-            animate();
+        }
+
+        // Procedural Steve Character Generator
+        function createSteveMesh(shirtColor = 0x00aaff) {
+            const steveGroup = new THREE.Group();
+
+            // Materials
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xdbac82 });
+            const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor });
+            const pantsMat = new THREE.MeshStandardMaterial({ color: 0x052166 });
+            const hairMat = new THREE.MeshStandardMaterial({ color: 0x4a2810 });
+
+            // Head
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skinMat);
+            head.position.y = 1.4;
+            steveGroup.add(head);
+
+            // Hair
+            const hair = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.15, 0.52), hairMat);
+            hair.position.y = 1.6;
+            steveGroup.add(hair);
+
+            // Body
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.75, 0.25), shirtMat);
+            body.position.y = 0.775;
+            steveGroup.add(body);
+
+            // Legs
+            const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.75, 0.25), pantsMat);
+            leftLeg.position.set(-0.13, 0.025, 0);
+            steveGroup.add(leftLeg);
+
+            const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.75, 0.25), pantsMat);
+            rightLeg.position.set(0.13, 0.025, 0);
+            steveGroup.add(rightLeg);
+
+            return steveGroup;
         }
 
         function createArena() {
@@ -186,8 +203,8 @@
             const obsMat = new THREE.MeshStandardMaterial({ color: 0x1a0d2b });
 
             // Ground Floor
-            for (let x = -20; x <= 20; x++) {
-                for (let z = -20; z <= 20; z++) {
+            for (let x = -15; x <= 15; x++) {
+                for (let z = -15; z <= 15; z++) {
                     const block = new THREE.Mesh(boxGeo, sandMat);
                     block.position.set(x, 0, z);
                     scene.add(block);
@@ -204,18 +221,6 @@
             }
         }
 
-        function createPlayerMeshes() {
-            const geo = new THREE.CylinderGeometry(0.4, 0.4, 1.8);
-            
-            const mat1 = new THREE.MeshStandardMaterial({ color: 0x00aaff });
-            player1.mesh = new THREE.Mesh(geo, mat1);
-            scene.add(player1.mesh);
-
-            const mat2 = new THREE.MeshStandardMaterial({ color: 0xff3333 });
-            player2.mesh = new THREE.Mesh(geo, mat2);
-            scene.add(player2.mesh);
-        }
-
         function buildHeartsUI(containerId) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
@@ -228,7 +233,7 @@
         }
 
         function updateHeartsDisplay(p) {
-            const container = document.getElementById(p.id === 1 ? 'p1-hearts' : 'p2-hearts');
+            const container = document.getElementById('p1-hearts');
             const hearts = container.getElementsByClassName('pixel-heart');
             for (let i = 0; i < 10; i++) {
                 if (i < p.health) hearts[i].classList.remove('empty');
@@ -236,35 +241,33 @@
             }
         }
 
+        function startGame(multiplayer) {
+            isMultiplayer = multiplayer;
+            document.getElementById('blocker').style.display = 'none';
+
+            // Create Steve Meshes
+            player1.mesh = createSteveMesh(0x00aaff);
+            opponent.mesh = createSteveMesh(0xff3333);
+            scene.add(player1.mesh);
+            scene.add(opponent.mesh);
+
+            if (!isMobile) controlsP1.lock();
+
+            prevTime = performance.now();
+            animate();
+        }
+
         function setupInputListeners() {
             document.addEventListener('keydown', (e) => {
-                // Player 1
                 if (e.code === 'KeyW') player1.keys.fwd = true;
                 if (e.code === 'KeyS') player1.keys.bwd = true;
                 if (e.code === 'KeyA') player1.keys.left = true;
                 if (e.code === 'KeyD') player1.keys.right = true;
-                if (e.code === 'Space' && player1.position.y <= 2.1) player1.velocity.y += 10;
+                if (e.code === 'Space' && player1.position.y <= 2.1) player1.velocity.y += 9;
 
                 if (['Digit1','Digit2','Digit3','Digit4','Digit5'].includes(e.code)) {
                     selectSlot(player1, parseInt(e.code.replace('Digit','')));
                 }
-
-                // Player 2
-                if (e.code === 'ArrowUp') player2.keys.fwd = true;
-                if (e.code === 'ArrowDown') player2.keys.bwd = true;
-                if (e.code === 'ArrowLeft') player2.keys.left = true;
-                if (e.code === 'ArrowRight') player2.keys.right = true;
-                if (e.code === 'ShiftRight' && player2.position.y <= 2.1) player2.velocity.y += 10;
-
-                if (e.code === 'KeyU') selectSlot(player2, 1);
-                if (e.code === 'KeyI') selectSlot(player2, 2);
-                if (e.code === 'KeyO') selectSlot(player2, 3);
-                if (e.code === 'KeyP') selectSlot(player2, 4);
-                if (e.code === 'KeyL') selectSlot(player2, 5);
-
-                // P2 Actions
-                if (e.code === 'KeyM') performAction(player2, 'attack');
-                if (e.code === 'KeyK') performAction(player2, 'use');
             });
 
             document.addEventListener('keyup', (e) => {
@@ -272,25 +275,63 @@
                 if (e.code === 'KeyS') player1.keys.bwd = false;
                 if (e.code === 'KeyA') player1.keys.left = false;
                 if (e.code === 'KeyD') player1.keys.right = false;
-
-                if (e.code === 'ArrowUp') player2.keys.fwd = false;
-                if (e.code === 'ArrowDown') player2.keys.bwd = false;
-                if (e.code === 'ArrowLeft') player2.keys.left = false;
-                if (e.code === 'ArrowRight') player2.keys.right = false;
             });
 
             document.addEventListener('mousedown', (e) => {
-                if (!controlsP1.isLocked) return;
+                if (!controlsP1.isLocked && !isMobile) return;
                 if (e.button === 0) performAction(player1, 'attack');
                 if (e.button === 2) performAction(player1, 'use');
             });
         }
 
+        function setupTouchEvents() {
+            const zone = document.getElementById('joystick-zone');
+            const knob = document.getElementById('joystick-knob');
+            let touchId = null;
+
+            zone.addEventListener('touchstart', (e) => {
+                const t = e.changedTouches[0];
+                touchId = t.identifier;
+            });
+
+            zone.addEventListener('touchmove', (e) => {
+                for (let t of e.changedTouches) {
+                    if (t.identifier === touchId) {
+                        const rect = zone.getBoundingClientRect();
+                        const x = t.clientX - rect.left - 60;
+                        const y = t.clientY - rect.top - 60;
+                        const dist = Math.min(Math.hypot(x, y), 40);
+                        const angle = Math.atan2(y, x);
+
+                        knob.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`;
+
+                        player1.keys.fwd = y < -15;
+                        player1.keys.bwd = y > 15;
+                        player1.keys.left = x < -15;
+                        player1.keys.right = x > 15;
+                    }
+                }
+            });
+
+            const resetJoystick = () => {
+                knob.style.transform = 'translate(0px, 0px)';
+                player1.keys.fwd = player1.keys.bwd = player1.keys.left = player1.keys.right = false;
+            };
+
+            zone.addEventListener('touchend', resetJoystick);
+            zone.addEventListener('touchcancel', resetJoystick);
+
+            document.getElementById('btn-jump').addEventListener('touchstart', () => {
+                if (player1.position.y <= 2.1) player1.velocity.y += 9;
+            });
+            document.getElementById('btn-attack').addEventListener('touchstart', () => performAction(player1, 'attack'));
+            document.getElementById('btn-use').addEventListener('touchstart', () => performAction(player1, 'use'));
+        }
+
         function selectSlot(p, slotNum) {
             p.slot = slotNum;
-            const prefix = p.id === 1 ? 'p1' : 'p2';
             for (let i = 1; i <= 5; i++) {
-                const el = document.getElementById(`${prefix}-slot-${i}`);
+                const el = document.getElementById(`p1-slot-${i}`);
                 if (i === slotNum) el.classList.add('active');
                 else el.classList.remove('active');
             }
@@ -298,72 +339,73 @@
 
         function performAction(p, type) {
             if (type === 'use' && p.slot === 2 && p.counts.gapple > 0) {
-                // Eat Gapple
                 p.health = Math.min(p.maxHealth, p.health + 4);
                 p.counts.gapple--;
-                document.getElementById(p.id === 1 ? 'p1-gapple' : 'p2-gapple').innerText = p.counts.gapple;
+                document.getElementById('p1-gapple').innerText = p.counts.gapple;
                 updateHeartsDisplay(p);
+            }
+        }
+
+        function updateAIBot(delta) {
+            if (!opponent.isAI) return;
+
+            // AI Logic: Chase Player 1
+            const dir = new THREE.Vector3().subVectors(player1.position, opponent.position);
+            dir.y = 0; dir.normalize();
+
+            opponent.position.addScaledVector(dir, 3.5 * delta);
+            opponent.mesh.lookAt(player1.position.x, opponent.position.y, player1.position.z);
+
+            // AI Gapple when health is low
+            if (opponent.health < 5 && opponent.counts.gapple > 0 && Math.random() < 0.02) {
+                opponent.health = Math.min(opponent.maxHealth, opponent.health + 4);
+                opponent.counts.gapple--;
             }
         }
 
         function onWindowResize() {
             renderer.setSize(window.innerWidth, window.innerHeight);
-            p1Camera.aspect = (window.innerWidth / 2) / window.innerHeight;
+            p1Camera.aspect = window.innerWidth / window.innerHeight;
             p1Camera.updateProjectionMatrix();
-            p2Camera.aspect = (window.innerWidth / 2) / window.innerHeight;
-            p2Camera.updateProjectionMatrix();
         }
 
         function animate() {
             requestAnimationFrame(animate);
             const time = performance.now();
-            const delta = (time - prevTime) / 1000;
+            const delta = Math.min((time - prevTime) / 1000, 0.1);
 
-            // Player Physics & Movement Logic
-            [player1, player2].forEach((p) => {
-                p.velocity.x -= p.velocity.x * 10.0 * delta;
-                p.velocity.z -= p.velocity.z * 10.0 * delta;
-                p.velocity.y -= 9.8 * 22.0 * delta;
+            // Player 1 Movement & Friction
+            player1.velocity.x -= player1.velocity.x * 10.0 * delta;
+            player1.velocity.z -= player1.velocity.z * 10.0 * delta;
+            player1.velocity.y -= 9.8 * 22.0 * delta;
 
-                const fwd = Number(p.keys.fwd) - Number(p.keys.bwd);
-                const side = Number(p.keys.right) - Number(p.keys.left);
+            const fwd = Number(player1.keys.fwd) - Number(player1.keys.bwd);
+            const side = Number(player1.keys.right) - Number(player1.keys.left);
 
-                if (fwd || side) {
-                    p.velocity.z -= fwd * 35.0 * delta;
-                    p.velocity.x -= side * 35.0 * delta;
-                }
+            if (fwd || side) {
+                player1.velocity.z -= fwd * 35.0 * delta;
+                player1.velocity.x -= side * 35.0 * delta;
+            }
 
-                p.position.x += p.velocity.x * delta;
-                p.position.z += p.velocity.z * delta;
-                p.position.y += p.velocity.y * delta;
+            player1.position.x += player1.velocity.x * delta;
+            player1.position.z += player1.velocity.z * delta;
+            player1.position.y += player1.velocity.y * delta;
 
-                if (p.position.y < 2.0) {
-                    p.velocity.y = 0;
-                    p.position.y = 2.0;
-                }
+            if (player1.position.y < 2.0) {
+                player1.velocity.y = 0;
+                player1.position.y = 2.0;
+            }
 
-                if (p.mesh) p.mesh.position.copy(p.position);
-            });
+            if (player1.mesh) player1.mesh.position.copy(player1.position);
 
-            // Camera Tracking
+            // AI Opponent Logic
+            updateAIBot(delta);
+            if (opponent.mesh) opponent.mesh.position.copy(opponent.position);
+
+            // Smooth Camera Follow
             p1Camera.position.copy(player1.position);
-            p2Camera.position.copy(player2.position);
-            p2Camera.lookAt(player1.position);
 
-            // Render Split-Screen
-            const width = window.innerWidth / 2;
-            const height = window.innerHeight;
-
-            // Render Left Side (P1)
-            renderer.setViewport(0, 0, width, height);
-            renderer.setScissor(0, 0, width, height);
             renderer.render(scene, p1Camera);
-
-            // Render Right Side (P2)
-            renderer.setViewport(width, 0, width, height);
-            renderer.setScissor(width, 0, width, height);
-            renderer.render(scene, p2Camera);
-
             prevTime = time;
         }
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Donut SMP - Steve Crystal PvP (Mobile & AI)</title>
+    <title>Donut SMP - Crystal PvP (Mobile, AI & 2P Split-Screen)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
@@ -11,6 +11,7 @@
         #game-view { display: flex; width: 100vw; height: 100vh; position: relative; }
         .player-viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
         .split-screen .player-viewport { width: 50vw; border-right: 2px solid #222; }
+        .split-screen .player-viewport:last-child { border-right: none; }
 
         /* Crosshair */
         .crosshair { position: absolute; top: 50%; left: 50%; width: 16px; height: 16px; transform: translate(-50%, -50%); pointer-events: none; z-index: 5; }
@@ -44,6 +45,7 @@
         .hotbar { display: flex; background: rgba(0, 0, 0, 0.7); border: 3px solid #3c3c3c; border-radius: 4px; pointer-events: auto; }
         .slot { width: 44px; height: 44px; border: 2px solid #8b8b8b; background: rgba(139, 139, 139, 0.3); margin: 2px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 18px; position: relative; cursor: pointer; }
         .slot.active { border-color: #ffffff; background: rgba(255, 255, 255, 0.4); box-shadow: inset 0 0 6px #fff; }
+        .slot-num { position: absolute; top: 2px; left: 3px; font-size: 9px; color: #aaa; }
         .count-badge { position: absolute; bottom: 2px; right: 3px; font-size: 10px; color: #fff; text-shadow: 1px 1px #000; }
 
         /* Mobile Controls UI */
@@ -57,7 +59,7 @@
 
         /* Start Overlay */
         #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 10; }
-        #instructions { text-align: center; padding: 25px; background: rgba(20, 20, 20, 0.95); border: 3px solid #00aaff; box-shadow: 0 0 30px #00aaff; border-radius: 8px; max-width: 550px; width: 90%; }
+        #instructions { text-align: center; padding: 25px; background: rgba(20, 20, 20, 0.95); border: 3px solid #00aaff; box-shadow: 0 0 30px #00aaff; border-radius: 8px; max-width: 600px; width: 90%; }
         .mode-btn { background: #00aaff; color: #fff; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; margin: 10px; border-radius: 5px; cursor: pointer; transition: 0.2s; }
         .mode-btn:hover { background: #0088cc; transform: scale(1.05); }
     </style>
@@ -66,20 +68,20 @@
 </head>
 <body>
     <div id="game-view">
-        <!-- Player Viewport -->
+        <!-- Player 1 Viewport -->
         <div class="player-viewport" id="p1-viewport">
-            <div class="player-tag" id="p1-tag" style="color: #55ffff;">Player 1 (Steve)</div>
+            <div class="player-tag" id="p1-tag" style="color: #55ffff;">P1: Blue Steve</div>
             <div class="crosshair"></div>
             <div class="hud">
                 <div class="status-wrapper">
                     <div class="hearts-bar" id="p1-hearts"></div>
                 </div>
                 <div class="hotbar">
-                    <div class="slot active" onclick="selectSlot(player1, 1)" id="p1-slot-1">🗡️</div>
-                    <div class="slot" onclick="selectSlot(player1, 2)" id="p1-slot-2">🍏<span class="count-badge" id="p1-gapple">64</span></div>
-                    <div class="slot" onclick="selectSlot(player1, 3)" id="p1-slot-3">🔮<span class="count-badge" id="p1-crystal">64</span></div>
-                    <div class="slot" onclick="selectSlot(player1, 4)" id="p1-slot-4">⬛<span class="count-badge" id="p1-obsidian">64</span></div>
-                    <div class="slot" onclick="selectSlot(player1, 5)" id="p1-slot-5">🗿<span class="count-badge" id="p1-totem">1</span></div>
+                    <div class="slot active" onclick="selectSlot(player1, 1)" id="p1-slot-1"><span class="slot-num">1</span>🗡️</div>
+                    <div class="slot" onclick="selectSlot(player1, 2)" id="p1-slot-2"><span class="slot-num">2</span>🍏<span class="count-badge" id="p1-gapple">64</span></div>
+                    <div class="slot" onclick="selectSlot(player1, 3)" id="p1-slot-3"><span class="slot-num">3</span>🔮<span class="count-badge" id="p1-crystal">64</span></div>
+                    <div class="slot" onclick="selectSlot(player1, 4)" id="p1-slot-4"><span class="slot-num">4</span>⬛<span class="count-badge" id="p1-obsidian">64</span></div>
+                    <div class="slot" onclick="selectSlot(player1, 5)" id="p1-slot-5"><span class="slot-num">5</span>🗿<span class="count-badge" id="p1-totem">1</span></div>
                 </div>
             </div>
 
@@ -94,12 +96,47 @@
             </div>
         </div>
 
+        <!-- Player 2 Viewport -->
+        <div class="player-viewport" id="p2-viewport" style="display: none;">
+            <div class="player-tag" id="p2-tag" style="color: #ff5555;">P2: Red Steve</div>
+            <div class="crosshair"></div>
+            <div class="hud">
+                <div class="status-wrapper">
+                    <div class="hearts-bar" id="p2-hearts"></div>
+                </div>
+                <div class="hotbar">
+                    <div class="slot active" id="p2-slot-1"><span class="slot-num">U</span>🗡️</div>
+                    <div class="slot" id="p2-slot-2"><span class="slot-num">I</span>🍏<span class="count-badge" id="p2-gapple">64</span></div>
+                    <div class="slot" id="p2-slot-3"><span class="slot-num">O</span>🔮<span class="count-badge" id="p2-crystal">64</span></div>
+                    <div class="slot" id="p2-slot-4"><span class="slot-num">P</span>⬛<span class="count-badge" id="p2-obsidian">64</span></div>
+                    <div class="slot" id="p2-slot-5"><span class="slot-num">L</span>🗿<span class="count-badge" id="p2-totem">1</span></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Start Screen Overlay -->
         <div id="blocker">
             <div id="instructions">
-                <h1 style="color:#00aaff; margin-bottom:10px;">DONUT SMP - STEVE CRYSTAL PVP</h1>
-                <p style="color:#ffaa00; font-size:14px; margin-bottom:15px; font-weight:bold;">Smooth Physics • Mobile & Keyboard • Steve Skin</p>
+                <h1 style="color:#00aaff; margin-bottom:10px;">DONUT SMP - CRYSTAL PVP</h1>
+                <p style="color:#ffaa00; font-size:14px; margin-bottom:15px; font-weight:bold;">Mobile Touch • Keyboard • Bot AI • Split-Screen</p>
                 
+                <div style="display:flex; justify-content:space-between; gap:15px; text-align:left; background:#111; padding:12px; border-radius:5px; font-size:12px; margin-bottom:15px;">
+                    <div>
+                        <h3 style="color:#55ffff;">PLAYER 1 (Left)</h3>
+                        <p><b>WASD</b> : Move | <b>SPACE</b> : Jump</p>
+                        <p><b>Left Click</b> : Attack / Explode</p>
+                        <p><b>Right Click</b> : Place / Eat Gapple</p>
+                        <p><b>1 - 5</b> : Hotbar Select</p>
+                    </div>
+                    <div style="border-left:1px solid #444; padding-left:15px;">
+                        <h3 style="color:#ff5555;">PLAYER 2 (Right)</h3>
+                        <p><b>ARROWS</b> : Move | <b>R-SHIFT</b> : Jump</p>
+                        <p><b>M Key</b> : Attack / Explode</p>
+                        <p><b>K Key</b> : Place / Eat Gapple</p>
+                        <p><b>U, I, O, P, L</b> : Hotbar Select</p>
+                    </div>
+                </div>
+
                 <div>
                     <button class="mode-btn" onclick="startGame(false)">1 PLAYER VS AI BOT</button>
                     <button class="mode-btn" style="background:#ff0055;" onclick="startGame(true)">2 PLAYER SPLIT-SCREEN</button>
@@ -112,7 +149,9 @@
         let scene, renderer, controlsP1, isMultiplayer = false, isMobile = false;
         let p1Camera, p2Camera;
 
+        const endCrystals = [];
         const placeableObjects = [];
+        const raycaster = new THREE.Raycaster();
 
         // Player States
         const player1 = {
@@ -124,13 +163,12 @@
         const opponent = {
             id: 2, isAI: true, health: 10, maxHealth: 10, position: new THREE.Vector3(5, 2, 0), velocity: new THREE.Vector3(),
             mesh: null, slot: 1, counts: { gapple: 64, crystal: 64, obsidian: 64, totem: 1 },
-            keys: { fwd: false, bwd: false, left: false, right: false }
+            keys: { fwd: false, bwd: false, left: false, right: false, jump: false }
         };
 
         let prevTime = performance.now();
 
         function init() {
-            // Detect Mobile
             isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
             if (isMobile) document.getElementById('mobile-ui').style.display = 'block';
 
@@ -144,7 +182,8 @@
             scene.add(sun);
 
             p1Camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            
+            p2Camera = new THREE.PerspectiveCamera(75, (window.innerWidth / 2) / window.innerHeight, 0.1, 1000);
+
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -154,38 +193,33 @@
 
             createArena();
             buildHeartsUI('p1-hearts');
+            buildHeartsUI('p2-hearts');
             setupInputListeners();
             setupTouchEvents();
 
             window.addEventListener('resize', onWindowResize);
         }
 
-        // Procedural Steve Character Generator
         function createSteveMesh(shirtColor = 0x00aaff) {
             const steveGroup = new THREE.Group();
 
-            // Materials
             const skinMat = new THREE.MeshStandardMaterial({ color: 0xdbac82 });
             const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor });
             const pantsMat = new THREE.MeshStandardMaterial({ color: 0x052166 });
             const hairMat = new THREE.MeshStandardMaterial({ color: 0x4a2810 });
 
-            // Head
             const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skinMat);
             head.position.y = 1.4;
             steveGroup.add(head);
 
-            // Hair
             const hair = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.15, 0.52), hairMat);
             hair.position.y = 1.6;
             steveGroup.add(hair);
 
-            // Body
             const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.75, 0.25), shirtMat);
             body.position.y = 0.775;
             steveGroup.add(body);
 
-            // Legs
             const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.75, 0.25), pantsMat);
             leftLeg.position.set(-0.13, 0.025, 0);
             steveGroup.add(leftLeg);
@@ -202,7 +236,6 @@
             const sandMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c });
             const obsMat = new THREE.MeshStandardMaterial({ color: 0x1a0d2b });
 
-            // Ground Floor
             for (let x = -15; x <= 15; x++) {
                 for (let z = -15; z <= 15; z++) {
                     const block = new THREE.Mesh(boxGeo, sandMat);
@@ -212,10 +245,10 @@
                 }
             }
 
-            // Central Obsidian Pillar
             for (let y = 1; y <= 3; y++) {
                 const obs = new THREE.Mesh(boxGeo, obsMat);
                 obs.position.set(0, y, 0);
+                obs.userData = { isObsidian: true };
                 scene.add(obs);
                 placeableObjects.push(obs);
             }
@@ -232,8 +265,8 @@
             }
         }
 
-        function updateHeartsDisplay(p) {
-            const container = document.getElementById('p1-hearts');
+        function updateHeartsDisplay(p, containerId) {
+            const container = document.getElementById(containerId);
             const hearts = container.getElementsByClassName('pixel-heart');
             for (let i = 0; i < 10; i++) {
                 if (i < p.health) hearts[i].classList.remove('empty');
@@ -245,11 +278,20 @@
             isMultiplayer = multiplayer;
             document.getElementById('blocker').style.display = 'none';
 
-            // Create Steve Meshes
             player1.mesh = createSteveMesh(0x00aaff);
             opponent.mesh = createSteveMesh(0xff3333);
             scene.add(player1.mesh);
             scene.add(opponent.mesh);
+
+            if (isMultiplayer) {
+                opponent.isAI = false;
+                document.getElementById('game-view').classList.add('split-screen');
+                document.getElementById('p2-viewport').style.display = 'block';
+                p1Camera.aspect = (window.innerWidth / 2) / window.innerHeight;
+                p1Camera.updateProjectionMatrix();
+            } else {
+                opponent.isAI = true;
+            }
 
             if (!isMobile) controlsP1.lock();
 
@@ -259,6 +301,7 @@
 
         function setupInputListeners() {
             document.addEventListener('keydown', (e) => {
+                // P1 Controls
                 if (e.code === 'KeyW') player1.keys.fwd = true;
                 if (e.code === 'KeyS') player1.keys.bwd = true;
                 if (e.code === 'KeyA') player1.keys.left = true;
@@ -268,6 +311,24 @@
                 if (['Digit1','Digit2','Digit3','Digit4','Digit5'].includes(e.code)) {
                     selectSlot(player1, parseInt(e.code.replace('Digit','')));
                 }
+
+                // P2 Controls (Split-Screen)
+                if (isMultiplayer) {
+                    if (e.code === 'ArrowUp') opponent.keys.fwd = true;
+                    if (e.code === 'ArrowDown') opponent.keys.bwd = true;
+                    if (e.code === 'ArrowLeft') opponent.keys.left = true;
+                    if (e.code === 'ArrowRight') opponent.keys.right = true;
+                    if (e.code === 'ShiftRight' && opponent.position.y <= 2.1) opponent.velocity.y += 9;
+
+                    if (e.code === 'KeyU') selectSlot(opponent, 1);
+                    if (e.code === 'KeyI') selectSlot(opponent, 2);
+                    if (e.code === 'KeyO') selectSlot(opponent, 3);
+                    if (e.code === 'KeyP') selectSlot(opponent, 4);
+                    if (e.code === 'KeyL') selectSlot(opponent, 5);
+
+                    if (e.code === 'KeyM') performAction(opponent, 'attack');
+                    if (e.code === 'KeyK') performAction(opponent, 'use');
+                }
             });
 
             document.addEventListener('keyup', (e) => {
@@ -275,6 +336,13 @@
                 if (e.code === 'KeyS') player1.keys.bwd = false;
                 if (e.code === 'KeyA') player1.keys.left = false;
                 if (e.code === 'KeyD') player1.keys.right = false;
+
+                if (isMultiplayer) {
+                    if (e.code === 'ArrowUp') opponent.keys.fwd = false;
+                    if (e.code === 'ArrowDown') opponent.keys.bwd = false;
+                    if (e.code === 'ArrowLeft') opponent.keys.left = false;
+                    if (e.code === 'ArrowRight') opponent.keys.right = false;
+                }
             });
 
             document.addEventListener('mousedown', (e) => {
@@ -330,43 +398,148 @@
 
         function selectSlot(p, slotNum) {
             p.slot = slotNum;
+            const prefix = p.id === 1 ? 'p1' : 'p2';
             for (let i = 1; i <= 5; i++) {
-                const el = document.getElementById(`p1-slot-${i}`);
-                if (i === slotNum) el.classList.add('active');
-                else el.classList.remove('active');
+                const el = document.getElementById(`${prefix}-slot-${i}`);
+                if (el) {
+                    if (i === slotNum) el.classList.add('active');
+                    else el.classList.remove('active');
+                }
             }
         }
 
+        function spawnCrystal(pos) {
+            const group = new THREE.Group();
+            const geo = new THREE.OctahedronGeometry(0.4);
+            const mat = new THREE.MeshStandardMaterial({ color: 0xff00ff, wireframe: true });
+            const mesh = new THREE.Mesh(geo, mat);
+            group.add(mesh);
+            group.position.copy(pos);
+            scene.add(group);
+            endCrystals.push(group);
+        }
+
+        function triggerExplosion(pos) {
+            [player1, opponent].forEach(p => {
+                const dist = p.position.distanceTo(pos);
+                if (dist < 4) {
+                    const dmg = Math.floor((4 - dist) * 3);
+                    p.health = Math.max(0, p.health - dmg);
+                    updateHeartsDisplay(p, p.id === 1 ? 'p1-hearts' : 'p2-hearts');
+                }
+            });
+        }
+
         function performAction(p, type) {
-            if (type === 'use' && p.slot === 2 && p.counts.gapple > 0) {
-                p.health = Math.min(p.maxHealth, p.health + 4);
-                p.counts.gapple--;
-                document.getElementById('p1-gapple').innerText = p.counts.gapple;
-                updateHeartsDisplay(p);
+            const cam = p.id === 1 ? p1Camera : p2Camera;
+
+            // Attack / Explode
+            if (type === 'attack') {
+                if (p.slot === 1) { // Sword hit
+                    const target = p.id === 1 ? opponent : player1;
+                    if (p.position.distanceTo(target.position) < 3) {
+                        target.health = Math.max(0, target.health - 2);
+                        updateHeartsDisplay(target, target.id === 1 ? 'p1-hearts' : 'p2-hearts');
+                    }
+                } else if (p.slot === 3) { // Explode Crystal
+                    raycaster.setFromCamera(new THREE.Vector2(0, 0), cam);
+                    const intersects = raycaster.intersectObjects(endCrystals.map(c => c.children[0]));
+                    if (intersects.length > 0) {
+                        const crystalGroup = intersects[0].object.parent;
+                        triggerExplosion(crystalGroup.position);
+                        scene.remove(crystalGroup);
+                        const idx = endCrystals.indexOf(crystalGroup);
+                        if (idx > -1) endCrystals.splice(idx, 1);
+                    }
+                }
+            }
+
+            // Use / Place
+            if (type === 'use') {
+                if (p.slot === 2 && p.counts.gapple > 0) { // Eat Gapple
+                    p.health = Math.min(p.maxHealth, p.health + 4);
+                    p.counts.gapple--;
+                    const el = document.getElementById(p.id === 1 ? 'p1-gapple' : 'p2-gapple');
+                    if (el) el.innerText = p.counts.gapple;
+                    updateHeartsDisplay(p, p.id === 1 ? 'p1-hearts' : 'p2-hearts');
+                } else if (p.slot === 4 && p.counts.obsidian > 0) { // Place Obsidian
+                    raycaster.setFromCamera(new THREE.Vector2(0, 0), cam);
+                    const intersects = raycaster.intersectObjects(placeableObjects);
+                    if (intersects.length > 0) {
+                        const hit = intersects[0];
+                        const pos = hit.point.add(hit.face.normal.clone().multiplyScalar(0.5)).floor().addScalar(0.5);
+                        const obsMat = new THREE.MeshStandardMaterial({ color: 0x1a0d2b });
+                        const obs = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), obsMat);
+                        obs.position.copy(pos);
+                        obs.userData = { isObsidian: true };
+                        scene.add(obs);
+                        placeableObjects.push(obs);
+                        p.counts.obsidian--;
+                        const el = document.getElementById(p.id === 1 ? 'p1-obsidian' : 'p2-obsidian');
+                        if (el) el.innerText = p.counts.obsidian;
+                    }
+                } else if (p.slot === 3 && p.counts.crystal > 0) { // Place Crystal
+                    raycaster.setFromCamera(new THREE.Vector2(0, 0), cam);
+                    const intersects = raycaster.intersectObjects(placeableObjects);
+                    if (intersects.length > 0 && intersects[0].object.userData.isObsidian) {
+                        const pos = intersects[0].object.position.clone().add(new THREE.Vector3(0, 0.8, 0));
+                        spawnCrystal(pos);
+                        p.counts.crystal--;
+                        const el = document.getElementById(p.id === 1 ? 'p1-crystal' : 'p2-crystal');
+                        if (el) el.innerText = p.counts.crystal;
+                    }
+                }
             }
         }
 
         function updateAIBot(delta) {
             if (!opponent.isAI) return;
 
-            // AI Logic: Chase Player 1
             const dir = new THREE.Vector3().subVectors(player1.position, opponent.position);
             dir.y = 0; dir.normalize();
 
             opponent.position.addScaledVector(dir, 3.5 * delta);
             opponent.mesh.lookAt(player1.position.x, opponent.position.y, player1.position.z);
 
-            // AI Gapple when health is low
             if (opponent.health < 5 && opponent.counts.gapple > 0 && Math.random() < 0.02) {
                 opponent.health = Math.min(opponent.maxHealth, opponent.health + 4);
                 opponent.counts.gapple--;
+                updateHeartsDisplay(opponent, 'p2-hearts');
             }
+        }
+
+        function updatePlayerMovement(p, delta) {
+            p.velocity.x -= p.velocity.x * 10.0 * delta;
+            p.velocity.z -= p.velocity.z * 10.0 * delta;
+            p.velocity.y -= 9.8 * 22.0 * delta;
+
+            const fwd = Number(p.keys.fwd) - Number(p.keys.bwd);
+            const side = Number(p.keys.right) - Number(p.keys.left);
+
+            if (fwd || side) {
+                p.velocity.z -= fwd * 35.0 * delta;
+                p.velocity.x -= side * 35.0 * delta;
+            }
+
+            p.position.x += p.velocity.x * delta;
+            p.position.z += p.velocity.z * delta;
+            p.position.y += p.velocity.y * delta;
+
+            if (p.position.y < 2.0) {
+                p.velocity.y = 0;
+                p.position.y = 2.0;
+            }
+
+            if (p.mesh) p.mesh.position.copy(p.position);
         }
 
         function onWindowResize() {
             renderer.setSize(window.innerWidth, window.innerHeight);
-            p1Camera.aspect = window.innerWidth / window.innerHeight;
+            const aspect = isMultiplayer ? (window.innerWidth / 2) / window.innerHeight : window.innerWidth / window.innerHeight;
+            p1Camera.aspect = aspect;
             p1Camera.updateProjectionMatrix();
+            p2Camera.aspect = aspect;
+            p2Camera.updateProjectionMatrix();
         }
 
         function animate() {
@@ -374,38 +547,40 @@
             const time = performance.now();
             const delta = Math.min((time - prevTime) / 1000, 0.1);
 
-            // Player 1 Movement & Friction
-            player1.velocity.x -= player1.velocity.x * 10.0 * delta;
-            player1.velocity.z -= player1.velocity.z * 10.0 * delta;
-            player1.velocity.y -= 9.8 * 22.0 * delta;
+            // Animate Crystal Rotations
+            endCrystals.forEach(c => c.rotation.y += delta * 2);
 
-            const fwd = Number(player1.keys.fwd) - Number(player1.keys.bwd);
-            const side = Number(player1.keys.right) - Number(player1.keys.left);
-
-            if (fwd || side) {
-                player1.velocity.z -= fwd * 35.0 * delta;
-                player1.velocity.x -= side * 35.0 * delta;
-            }
-
-            player1.position.x += player1.velocity.x * delta;
-            player1.position.z += player1.velocity.z * delta;
-            player1.position.y += player1.velocity.y * delta;
-
-            if (player1.position.y < 2.0) {
-                player1.velocity.y = 0;
-                player1.position.y = 2.0;
-            }
-
-            if (player1.mesh) player1.mesh.position.copy(player1.position);
-
-            // AI Opponent Logic
-            updateAIBot(delta);
-            if (opponent.mesh) opponent.mesh.position.copy(opponent.position);
-
-            // Smooth Camera Follow
+            // Update P1
+            updatePlayerMovement(player1, delta);
             p1Camera.position.copy(player1.position);
 
-            renderer.render(scene, p1Camera);
+            // Update P2 or AI
+            if (opponent.isAI) {
+                updateAIBot(delta);
+            } else {
+                updatePlayerMovement(opponent, delta);
+                p2Camera.position.copy(opponent.position);
+            }
+
+            // Render Views
+            if (isMultiplayer) {
+                // P1 Left Viewport
+                renderer.setViewport(0, 0, window.innerWidth / 2, window.innerHeight);
+                renderer.setScissor(0, 0, window.innerWidth / 2, window.innerHeight);
+                renderer.setScissorTest(true);
+                renderer.render(scene, p1Camera);
+
+                // P2 Right Viewport
+                renderer.setViewport(window.innerWidth / 2, 0, window.innerWidth / 2, window.innerHeight);
+                renderer.setScissor(window.innerWidth / 2, 0, window.innerWidth / 2, window.innerHeight);
+                renderer.setScissorTest(true);
+                renderer.render(scene, p2Camera);
+            } else {
+                renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+                renderer.setScissorTest(false);
+                renderer.render(scene, p1Camera);
+            }
+
             prevTime = time;
         }
 

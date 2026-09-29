@@ -180,6 +180,7 @@
         let currentSlot = 1; 
         let playerHealth = 10;
         const maxHealth = 10;
+        let textTimeout = null;
 
         let counts = {
             gapple: 64,
@@ -189,13 +190,13 @@
         };
 
         // Held Item Meshes
-        let swordMesh, heldCrystalMesh, heldTotemMesh;
+        let swordMesh, heldTotemMesh;
 
-        // Interactive Objects Tracker
+        // Interactive Objects & Systems Tracker
         const placeableObjects = [];
         const endCrystals = [];
-        const particles = [];
         const dummyTargets = [];
+        const particleSystems = [];
 
         // Audio Generator (Web Audio API)
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -269,9 +270,9 @@
             sunLight.position.set(50, 100, 50);
             scene.add(sunLight);
 
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
             document.getElementById('game-container').appendChild(renderer.domElement);
 
             controls = new THREE.PointerLockControls(camera, document.body);
@@ -283,7 +284,7 @@
             scene.add(controls.getObject());
             controls.getObject().position.set(0, 3, 0);
 
-            buildColosseumArena();
+            buildColosseumArenaInstanced();
             buildHeldItemModels();
             spawnDummyTargets();
             setupControls();
@@ -299,9 +300,12 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        function buildColosseumArena() {
+        // Highly Optimized Arena Built via Instanced Mesh Techniques
+        function buildColosseumArenaInstanced() {
             const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-            
+            const radius = 35;
+
+            // Materials
             const sandMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.9 });
             const stoneMat = new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.8 });
             const darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
@@ -309,73 +313,99 @@
             const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.7 });
             const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57, roughness: 0.6 });
 
-            const radius = 35;
-
-            // Sand Floor
+            // 1. Sand Floor
+            const sandPositions = [];
             for (let x = -radius; x <= radius; x++) {
                 for (let z = -radius; z <= radius; z++) {
                     if (x * x + z * z <= radius * radius) {
-                        const sand = new THREE.Mesh(boxGeo, sandMat);
-                        sand.position.set(x, 0, z);
-                        sand.name = "ground";
-                        scene.add(sand);
-                        placeableObjects.push(sand);
+                        sandPositions.push(new THREE.Vector3(x, 0, z));
                     }
                 }
             }
 
-            function createSolidRing(ringRadius, startY, height, material) {
+            const sandInstanced = new THREE.InstancedMesh(boxGeo, sandMat, sandPositions.length);
+            const dummyMatrix = new THREE.Matrix4();
+            sandPositions.forEach((pos, i) => {
+                dummyMatrix.setPosition(pos);
+                sandInstanced.setMatrixAt(i, dummyMatrix);
+
+                // Invisible ground interaction mesh per position for raycasting
+                const invisibleMesh = new THREE.Mesh(boxGeo, new THREE.MeshBasicMaterial({ visible: false }));
+                invisibleMesh.position.copy(pos);
+                scene.add(invisibleMesh);
+                placeableObjects.push(invisibleMesh);
+            });
+            sandInstanced.instanceMatrix.needsUpdate = true;
+            scene.add(sandInstanced);
+
+            // Ring helper calculation
+            function getRingTransforms(ringRadius, startY, height) {
+                const transforms = [];
                 const circumference = 2 * Math.PI * ringRadius;
                 const steps = Math.ceil(circumference * 1.5);
-                
                 for (let i = 0; i < steps; i++) {
                     const angle = (i / steps) * Math.PI * 2;
                     const x = Math.round(Math.cos(angle) * ringRadius);
                     const z = Math.round(Math.sin(angle) * ringRadius);
-
                     for (let y = 0; y < height; y++) {
-                        const block = new THREE.Mesh(boxGeo, material);
-                        block.position.set(x, startY + y, z);
-                        scene.add(block);
+                        transforms.push({ x, y: startY + y, z, sx: 1, sy: 1, sz: 1 });
                     }
                 }
+                return transforms;
             }
 
-            createSolidRing(radius + 1, 1, 4, darkStoneMat);
+            // Collect rings batch matrix data
+            const darkStoneTransforms = getRingTransforms(radius + 1, 1, 4);
+            const stoneTransforms = [];
 
             for (let tier = 0; tier < 8; tier++) {
                 const currentRadius = radius + 2 + tier;
                 const tierHeight = 4 + tier;
-                createSolidRing(currentRadius, tierHeight, 1, stoneMat);
-                
+                stoneTransforms.push(...getRingTransforms(currentRadius, tierHeight, 1));
                 for (let y = 1; y < tierHeight; y++) {
-                    createSolidRing(currentRadius, y, 1, darkStoneMat);
+                    darkStoneTransforms.push(...getRingTransforms(currentRadius, y, 1));
                 }
             }
 
             const pillarRadius = radius + 10;
+            const pillarTransforms = [];
+            const leafTransforms = [];
+
             for (let i = 0; i < 24; i++) {
                 const angle = (i / 24) * Math.PI * 2;
                 const px = Math.cos(angle) * pillarRadius;
                 const pz = Math.sin(angle) * pillarRadius;
 
                 for (let ph = 0; ph < 8; ph++) {
-                    const pillar = new THREE.Mesh(boxGeo, pillarMat);
-                    pillar.position.set(px, 12 + ph, pz);
-                    pillar.scale.set(1.5, 1, 1.5);
-                    scene.add(pillar);
+                    pillarTransforms.push({ x: px, y: 12 + ph, z: pz, sx: 1.5, sy: 1, sz: 1.5 });
                 }
-
-                const bush = new THREE.Mesh(boxGeo, leafMat);
-                bush.position.set(px * 0.95, 12, pz * 0.95);
-                bush.scale.set(1.5, 1.5, 1.5);
-                scene.add(bush);
+                leafTransforms.push({ x: px * 0.95, y: 12, z: pz * 0.95, sx: 1.5, sy: 1.5, sz: 1.5 });
             }
 
-            createSolidRing(pillarRadius - 1, 20, 1, stoneMat);
-            createSolidRing(pillarRadius, 20, 1, stoneMat);
-            createSolidRing(pillarRadius + 1, 20, 1, stoneMat);
-            createSolidRing(pillarRadius, 21, 1, roofMat);
+            stoneTransforms.push(...getRingTransforms(pillarRadius - 1, 20, 1));
+            stoneTransforms.push(...getRingTransforms(pillarRadius, 20, 1));
+            stoneTransforms.push(...getRingTransforms(pillarRadius + 1, 20, 1));
+            const roofTransforms = getRingTransforms(pillarRadius, 21, 1);
+
+            function createBatchMesh(geometry, material, transforms) {
+                if (transforms.length === 0) return;
+                const instanced = new THREE.InstancedMesh(geometry, material, transforms.length);
+                const mat = new THREE.Matrix4();
+                const scaleVec = new THREE.Vector3();
+                transforms.forEach((t, i) => {
+                    scaleVec.set(t.sx || 1, t.sy || 1, t.sz || 1);
+                    mat.compose(new THREE.Vector3(t.x, t.y, t.z), new THREE.Quaternion(), scaleVec);
+                    instanced.setMatrixAt(i, mat);
+                });
+                instanced.instanceMatrix.needsUpdate = true;
+                scene.add(instanced);
+            }
+
+            createBatchMesh(boxGeo, darkStoneMat, darkStoneTransforms);
+            createBatchMesh(boxGeo, stoneMat, stoneTransforms);
+            createBatchMesh(boxGeo, pillarMat, pillarTransforms);
+            createBatchMesh(boxGeo, leafMat, leafTransforms);
+            createBatchMesh(boxGeo, roofMat, roofTransforms);
         }
 
         // Target Dummies in Arena
@@ -439,7 +469,7 @@
             camera.add(heldTotemMesh);
         }
 
-        // End Crystal Mesh (with spinning outer cube and inner core flame)
+        // End Crystal Mesh Construction
         function createEndCrystalMesh() {
             const crystalGroup = new THREE.Group();
 
@@ -450,7 +480,7 @@
             baseMesh.position.y = 0.125;
             crystalGroup.add(baseMesh);
 
-            // Fire / Inner Core Glow
+            // Core Flame
             const coreGeo = new THREE.BoxGeometry(0.35, 0.55, 0.35);
             const coreMat = new THREE.MeshBasicMaterial({ color: 0xff3300 });
             const coreMesh = new THREE.Mesh(coreGeo, coreMat);
@@ -463,7 +493,7 @@
             flameMesh.position.y = 0.65;
             crystalGroup.add(flameMesh);
 
-            // Floating Outer Glass Crystal
+            // Floating Glass Shell
             const crystalGeo = new THREE.BoxGeometry(0.65, 0.65, 0.65);
             const crystalMat = new THREE.MeshPhongMaterial({
                 color: 0xda70d6,
@@ -533,7 +563,6 @@
                 else el.classList.remove('active');
             }
 
-            // Update held item visibility
             swordMesh.visible = (currentSlot === 1);
             heldTotemMesh.visible = (currentSlot === 5);
         }
@@ -567,7 +596,7 @@
 
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
-            // 1. Check End Crystal hit
+            // Check Crystal Hit
             const crystalHits = raycaster.intersectObjects(endCrystals, true);
             if (crystalHits.length > 0) {
                 let hitObj = crystalHits[0].object;
@@ -578,18 +607,17 @@
                 return;
             }
 
-            // 2. Check Target Dummy hit
+            // Check Target Dummy Hit
             const dummyHits = raycaster.intersectObjects(dummyTargets.map(d => d.children[0]), true);
             if (dummyHits.length > 0) {
                 const dummy = dummyHits[0].object.parent;
                 dummy.position.x += (Math.random() - 0.5) * 0.4;
                 dummy.position.z += (Math.random() - 0.5) * 0.4;
-                showActionText("Hit Dummy Target! -3 HP");
+                showActionText("Hit Dummy Target!");
             }
         }
 
         function handleRightClick() {
-            // Slot 2: Golden Apple
             if (currentSlot === 2) {
                 eatGoldenApple();
                 return;
@@ -605,12 +633,9 @@
                 const gridY = Math.round(point.y);
                 const gridZ = Math.round(point.z);
 
-                // Slot 4: Obsidian
                 if (currentSlot === 4 && counts.obsidian > 0) {
                     placeObsidianBlock(gridX, gridY, gridZ);
-                }
-                // Slot 3: End Crystal
-                else if (currentSlot === 3 && counts.crystal > 0) {
+                } else if (currentSlot === 3 && counts.crystal > 0) {
                     placeEndCrystal(gridX, gridY, gridZ);
                 }
             }
@@ -654,185 +679,184 @@
                 playSound('eat');
                 showActionText("Ate Golden Apple! +4 Hearts");
             } else {
-                showActionText("Health is full!");
+                showActionText("Health is already full!");
             }
         }
 
-        function triggerTotemPop() {
-            counts.totem--;
-            document.getElementById('totem-count').innerText = counts.totem;
+        function detonateCrystal(crystalObj) {
+            const index = endCrystals.indexOf(crystalObj);
+            if (index > -1) {
+                endCrystals.splice(index, 1);
+            }
 
-            playerHealth = 4; // Auto-revive to 4 hearts
-            updateHeartsUI();
-
-            playSound('totem');
-            showActionText("TOTEM POPPED! Revived!");
-
-            const totemUI = document.getElementById('totem-pop-overlay');
-            totemUI.classList.add('active');
-            setTimeout(() => totemUI.classList.remove('active'), 800);
-        }
-
-        function detonateCrystal(crystalGroup) {
-            const pos = crystalGroup.position.clone().add(new THREE.Vector3(0, 0.85, 0));
-
-            scene.remove(crystalGroup);
-            const index = endCrystals.indexOf(crystalGroup);
-            if (index > -1) endCrystals.splice(index, 1);
-
+            const explosionPos = crystalObj.position.clone();
+            scene.remove(crystalObj);
             playSound('explode');
-            triggerScreenFlash();
-            createExplosionParticles(pos);
 
-            // Damage player
-            const playerPos = controls.getObject().position;
-            const dist = playerPos.distanceTo(pos);
+            spawnParticleExplosion(explosionPos);
 
-            if (dist < 8.0) {
-                const damage = Math.round((1 - dist / 8.0) * 8);
-                playerHealth -= damage;
+            // Screen Flash Effect
+            const flash = document.getElementById('flash-overlay');
+            flash.style.background = 'rgba(255, 255, 255, 0.6)';
+            setTimeout(() => { flash.style.background = 'rgba(255, 255, 255, 0)'; }, 60);
 
-                if (playerHealth <= 0) {
-                    if (counts.totem > 0) {
-                        triggerTotemPop();
-                    } else {
-                        playerHealth = 0;
-                        updateHeartsUI();
-                        showActionText("You Died to End Crystal Explosion!");
-                        setTimeout(respawnPlayer, 1500);
-                    }
-                } else {
-                    updateHeartsUI();
-                }
+            // Knockback & Player Damage
+            const dist = camera.position.distanceTo(explosionPos);
+            if (dist < 6.0) {
+                const damage = Math.round((1 - dist / 6.0) * 8);
+                takeDamage(damage);
 
-                // Knockback
-                const knockbackDir = playerPos.clone().sub(pos).normalize();
-                velocity.x += knockbackDir.x * 22.0;
-                velocity.z += knockbackDir.z * 22.0;
-                velocity.y += 8.0;
-            }
-
-            // Chain Explosions
-            for (let i = endCrystals.length - 1; i >= 0; i--) {
-                const other = endCrystals[i];
-                if (other.position.distanceTo(pos) < 5.0) {
-                    setTimeout(() => detonateCrystal(other), 80);
-                }
+                const knockbackDir = camera.position.clone().sub(explosionPos).normalize();
+                velocity.x += knockbackDir.x * 12.0;
+                velocity.y += Math.max(3.0, knockbackDir.y * 10.0);
+                velocity.z += knockbackDir.z * 12.0;
             }
         }
 
-        function createExplosionParticles(pos) {
-            const pCount = 60;
-            const pGeo = new THREE.BufferGeometry();
-            const positions = [];
+        // Particle System for Explosion
+        function spawnParticleExplosion(pos) {
+            const particleCount = 60;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
             const velocities = [];
 
-            for (let i = 0; i < pCount; i++) {
-                positions.push(pos.x, pos.y, pos.z);
-                velocities.push(
-                    (Math.random() - 0.5) * 14,
-                    (Math.random() - 0.2) * 14,
-                    (Math.random() - 0.5) * 14
-                );
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] = pos.x;
+                positions[i * 3 + 1] = pos.y + 0.5;
+                positions[i * 3 + 2] = pos.z;
+
+                velocities.push(new THREE.Vector3(
+                    (Math.random() - 0.5) * 12,
+                    Math.random() * 8 + 2,
+                    (Math.random() - 0.5) * 12
+                ));
             }
 
-            pGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-            const pMat = new THREE.PointsMaterial({ color: 0xffaa00, size: 0.45, transparent: true });
-            const pSystem = new THREE.Points(pGeo, pMat);
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const material = new THREE.PointsMaterial({ color: 0xff5500, size: 0.25, transparent: true, opacity: 1.0 });
+            const pSystem = new THREE.Points(geometry, material);
+            pSystem.userData = { velocities: velocities, age: 0 };
 
             scene.add(pSystem);
-            particles.push({ system: pSystem, velocities: velocities, age: 0 });
+            particleSystems.push(pSystem);
         }
 
-        function triggerScreenFlash() {
-            const flash = document.getElementById('flash-overlay');
-            flash.style.background = 'rgba(255, 255, 255, 0.85)';
-            setTimeout(() => { flash.style.background = 'rgba(255, 255, 255, 0)'; }, 80);
+        function takeDamage(amount) {
+            playerHealth -= amount;
+            if (playerHealth <= 0) {
+                if (counts.totem > 0) {
+                    popTotem();
+                } else {
+                    playerHealth = maxHealth;
+                    controls.getObject().position.set(0, 3, 0);
+                    showActionText("You died! Respawned.");
+                }
+            }
+            updateHeartsUI();
+        }
+
+        function popTotem() {
+            counts.totem--;
+            document.getElementById('totem-count').innerText = counts.totem;
+            playerHealth = 4;
+            playSound('totem');
+
+            const totemOverlay = document.getElementById('totem-pop-overlay');
+            totemOverlay.classList.add('active');
+            setTimeout(() => { totemOverlay.classList.remove('active'); }, 1000);
+
+            showActionText("TOTEM POPPED! Saved from Death!");
         }
 
         function updateHeartsUI() {
             const container = document.getElementById('hearts-container');
-            const hearts = container.getElementsByClassName('pixel-heart');
-            for (let i = 0; i < 10; i++) {
-                if (i < playerHealth) hearts[i].classList.remove('empty');
-                else hearts[i].classList.add('empty');
-            }
+            const hearts = container.querySelectorAll('.pixel-heart');
+            hearts.forEach((heart, idx) => {
+                if (idx < playerHealth) {
+                    heart.classList.remove('empty');
+                } else {
+                    heart.classList.add('empty');
+                }
+            });
         }
 
         function showActionText(msg) {
-            const txt = document.getElementById('action-text');
-            txt.innerText = msg;
-            txt.style.opacity = 1;
-            setTimeout(() => { txt.style.opacity = 0; }, 1500);
+            const el = document.getElementById('action-text');
+            el.innerText = msg;
+            el.style.opacity = 1;
+
+            if (textTimeout) clearTimeout(textTimeout);
+            textTimeout = setTimeout(() => { el.style.opacity = 0; }, 1800);
         }
 
-        function respawnPlayer() {
-            playerHealth = maxHealth;
-            counts.totem = 1;
-            document.getElementById('totem-count').innerText = counts.totem;
-            updateHeartsUI();
-            controls.getObject().position.set(0, 3, 0);
-            velocity.set(0, 0, 0);
-            showActionText("Respawned!");
-        }
-
+        // Main Smooth Engine Loop
         function animate() {
             requestAnimationFrame(animate);
-            const time = performance.now();
-            const delta = (time - prevTime) / 1000;
 
+            const time = performance.now();
+            const delta = Math.min((time - prevTime) / 1000, 0.1); 
+            prevTime = time;
+
+            // Player Controller Mechanics
             if (controls.isLocked) {
                 velocity.x -= velocity.x * 10.0 * delta;
                 velocity.z -= velocity.z * 10.0 * delta;
-                velocity.y -= 9.8 * 25.0 * delta;
+                velocity.y -= 25.0 * delta; // Constant Gravity
 
-                const dirZ = Number(moveForward) - Number(moveBackward);
-                const dirX = Number(moveRight) - Number(moveLeft);
-                if (moveForward || moveBackward) velocity.z -= dirZ * 45.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= dirX * 45.0 * delta;
+                const inputDir = new THREE.Vector3(
+                    Number(moveRight) - Number(moveLeft),
+                    0,
+                    Number(moveForward) - Number(moveBackward)
+                ).normalize();
+
+                if (moveForward || moveBackward) velocity.z -= inputDir.z * 80.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= inputDir.x * 80.0 * delta;
 
                 controls.moveRight(-velocity.x * delta);
                 controls.moveForward(-velocity.z * delta);
-                controls.getObject().position.y += (velocity.y * delta);
+                controls.getObject().position.y += velocity.y * delta;
 
-                if (controls.getObject().position.y < 2.0) {
+                if (controls.getObject().position.y < 2.5) {
                     velocity.y = 0;
-                    controls.getObject().position.y = 2.0;
+                    controls.getObject().position.y = 2.5;
                     canJump = true;
                 }
             }
 
-            // Animate Floating End Crystals
-            const t = time * 0.003;
-            endCrystals.forEach((crystal) => {
-                const data = crystal.userData;
-                if (data && data.outerCrystal) {
-                    data.outerCrystal.rotation.y += 0.03;
-                    data.outerCrystal.rotation.x = Math.sin(t + data.floatOffset) * 0.2;
-                    data.outerCrystal.position.y = 0.85 + Math.sin(t * 2 + data.floatOffset) * 0.08;
+            // Crystal Idle Animation
+            endCrystals.forEach(c => {
+                if (c.userData.outerCrystal) {
+                    c.userData.outerCrystal.rotation.y += delta * 1.5;
+                    c.userData.outerCrystal.rotation.x += delta * 0.8;
+                    c.userData.outerCrystal.position.y = 0.85 + Math.sin(time * 0.003 + c.userData.floatOffset) * 0.08;
                 }
             });
 
-            // Animate Particles
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-                p.age += delta;
-                const posArr = p.system.geometry.attributes.position.array;
+            // Particles Update Loop
+            for (let i = particleSystems.length - 1; i >= 0; i--) {
+                const ps = particleSystems[i];
+                ps.userData.age += delta;
 
-                for (let j = 0; j < posArr.length; j += 3) {
-                    posArr[j] += p.velocities[j] * delta;
-                    posArr[j + 1] += p.velocities[j + 1] * delta;
-                    posArr[j + 2] += p.velocities[j + 2] * delta;
+                const posAttr = ps.geometry.attributes.position;
+                for (let j = 0; j < ps.userData.velocities.length; j++) {
+                    const vel = ps.userData.velocities[j];
+                    posAttr.setX(j, posAttr.getX(j) + vel.x * delta);
+                    posAttr.setY(j, posAttr.getY(j) + vel.y * delta);
+                    posAttr.setZ(j, posAttr.getZ(j) + vel.z * delta);
+                    vel.y -= 15.0 * delta; // Particle gravity
                 }
-                p.system.geometry.attributes.position.needsUpdate = true;
+                posAttr.needsUpdate = true;
 
-                if (p.age > 0.5) {
-                    scene.remove(p.system);
-                    particles.splice(i, 1);
+                ps.material.opacity = Math.max(0, 1.0 - ps.userData.age / 0.8);
+
+                if (ps.userData.age >= 0.8) {
+                    scene.remove(ps);
+                    ps.geometry.dispose();
+                    ps.material.dispose();
+                    particleSystems.splice(i, 1);
                 }
             }
 
-            prevTime = time;
             renderer.render(scene, camera);
         }
 

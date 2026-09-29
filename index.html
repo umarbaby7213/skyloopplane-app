@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Donut SMP - End Crystal PvP (Mobile, AI & Multiplayer)</title>
+    <title>Donut SMP - End Crystal PvP (Full Inventory)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
@@ -18,7 +18,7 @@
         /* Flash Overlays */
         #flash-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255, 255, 255, 0); pointer-events: none; z-index: 4; transition: background 0.05s ease-out; }
         
-        /* Totem Pop Animation UI */
+        /* Totem Pop Overlay */
         #totem-pop-overlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
             pointer-events: none; z-index: 8; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.27);
@@ -29,13 +29,12 @@
         /* HUD Container */
         #hud { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 7; }
         
-        /* Hearts & Food Bars Row */
+        /* Hearts & Food Row */
         .status-wrapper { display: flex; justify-content: space-between; width: 100%; margin-bottom: 6px; gap: 10px; }
-        
         .hearts-bar, .food-bar { display: flex; gap: 2px; background: rgba(0, 0, 0, 0.6); padding: 4px 8px; border-radius: 4px; border: 2px solid #3c3c3c; }
         .heart-wrapper, .shank-wrapper { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; }
         
-        /* Pixel Art Minecraft Heart */
+        /* Pixel Art Icons */
         .pixel-heart {
             width: 9px; height: 9px; image-rendering: pixelated;
             box-shadow: 
@@ -51,7 +50,6 @@
         }
         .pixel-heart.empty { opacity: 0.2; }
 
-        /* Pixel Art Minecraft Food Shank */
         .pixel-shank {
             width: 9px; height: 9px; image-rendering: pixelated;
             box-shadow: 
@@ -66,7 +64,6 @@
             transform: scale(1.6);
         }
 
-        /* Pixel Art Golden Apple Icon */
         .pixel-gapple {
             width: 9px; height: 9px; image-rendering: pixelated;
             box-shadow: 
@@ -90,21 +87,32 @@
         .slot-num { position: absolute; top: 1px; left: 3px; font-size: 9px; color: #aaa; font-weight: bold; }
         .count-badge { position: absolute; bottom: 1px; right: 3px; font-size: 10px; color: #fff; font-weight: bold; text-shadow: 1px 1px #000; }
 
+        /* Full Inventory GUI Screen (Opened with 'E') */
+        #inventory-screen {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 380px; background: #c6c6c6; border: 4px solid #373737; border-radius: 6px;
+            padding: 15px; display: none; flex-direction: column; gap: 10px; z-index: 20;
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.8); pointer-events: auto;
+        }
+        #inventory-screen h3 { color: #373737; font-size: 16px; margin-bottom: 5px; text-align: center; font-weight: bold; }
+        .inv-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; background: #8b8b8b; padding: 6px; border: 3px solid #373737; }
+        .inv-slot { width: 34px; height: 34px; background: #8b8b8b; border: 2px solid #373737; display: flex; justify-content: center; align-items: center; font-size: 16px; cursor: pointer; position: relative; }
+        .inv-slot:hover { background: #aaaaaa; }
+
         /* Mobile Controls Overlays */
         #joystick-zone { position: absolute; bottom: 20px; left: 20px; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 50%; z-index: 6; display: none; }
         #joystick-knob { position: absolute; top: 35px; left: 35px; width: 50px; height: 50px; background: rgba(255, 255, 255, 0.4); border-radius: 50%; }
         
-        #mobile-buttons { position: absolute; bottom: 20px; right: 20px; display: none; flex-direction: column; gap: 10px; z-index: 6; }
-        .mobile-btn { width: 58px; height: 58px; background: rgba(0, 0, 0, 0.6); border: 2px solid #fff; border-radius: 50%; color: #fff; font-size: 13px; font-weight: bold; display: flex; justify-content: center; align-items: center; text-align: center; }
+        #mobile-buttons { position: absolute; bottom: 20px; right: 20px; display: none; flex-direction: column; gap: 8px; z-index: 6; }
+        .mobile-btn { width: 54px; height: 54px; background: rgba(0, 0, 0, 0.6); border: 2px solid #fff; border-radius: 50%; color: #fff; font-size: 12px; font-weight: bold; display: flex; justify-content: center; align-items: center; text-align: center; }
         .mobile-btn:active { background: rgba(255, 255, 255, 0.4); }
 
         /* Action Text Overlay */
         #action-text { position: absolute; top: 60%; left: 50%; transform: translateX(-50%); color: #ffeb3b; font-size: 16px; font-weight: bold; text-shadow: 2px 2px #000; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 5; }
 
         /* Start Screen Blocker */
-        #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 10; }
+        #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 30; }
         #instructions { text-align: center; padding: 25px; background: rgba(20, 20, 20, 0.95); border: 3px solid #ff0055; box-shadow: 0 0 30px #ff0055; border-radius: 8px; max-width: 90%; width: 480px; }
-        
         .mode-btn { margin: 8px 0; padding: 12px; width: 100%; background: #ff0055; color: #fff; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .mode-btn:hover { background: #ff3377; }
         #room-input { width: 100%; padding: 10px; margin: 8px 0; text-align: center; font-size: 18px; border-radius: 5px; border: 2px solid #ffaa00; background: #222; color: #fff; }
@@ -124,14 +132,21 @@
         <!-- Touch Joysticks & Buttons -->
         <div id="joystick-zone"><div id="joystick-knob"></div></div>
         <div id="mobile-buttons">
+            <div class="mobile-btn" id="btn-inv" style="border-color:#ffaa00;">INV</div>
             <div class="mobile-btn" id="btn-jump">JUMP</div>
             <div class="mobile-btn" id="btn-hit" style="border-color:#ff5555;">HIT</div>
             <div class="mobile-btn" id="btn-place" style="border-color:#55ff55;">PLACE</div>
         </div>
 
+        <!-- Full Inventory GUI Screen -->
+        <div id="inventory-screen">
+            <h3>PLAYER INVENTORY (Press E to Close)</h3>
+            <div class="inv-grid" id="inv-grid-container"></div>
+            <p style="font-size: 11px; color: #333; text-align: center;">Click any item to refill current hotbar slot with 64!</p>
+        </div>
+
         <!-- HUD -->
         <div id="hud">
-            <!-- Health & Hunger Bars -->
             <div class="status-wrapper">
                 <div class="hearts-bar" id="hearts-container">
                     <div class="heart-wrapper"><div class="pixel-heart"></div></div>
@@ -185,8 +200,8 @@
                 <button class="mode-btn" id="btn-mode-mp" style="background:#00aa55;">2. JOIN MULTIPLAYER ROOM</button>
 
                 <div style="text-align: left; background: #111; padding: 12px; margin-top:10px; border-radius: 5px; font-size: 11px; line-height: 1.4;">
-                    <p><b>Mobile:</b> Left Joystick (Move) | Right Drag (Look)</p>
-                    <p><b>Multiplayer Rules:</b> Enter exact same 4-digit code as your brother to join each other!</p>
+                    <p><b>PC:</b> Press 'E' to open Full Stacked Inventory!</p>
+                    <p><b>Mobile:</b> Tap 'INV' button to open Inventory GUI!</p>
                 </div>
             </div>
         </div>
@@ -211,8 +226,9 @@
         let playerHealth = 10;
         const maxHealth = 10;
         let textTimeout = null;
+        let isInventoryOpen = false;
 
-        // Both player & bot start with 64 Totems
+        // Player Item Counts
         let counts = { gapple: 64, crystal: 64, obsidian: 64, totem: 64 };
 
         // Game Mode & Multiplayer
@@ -336,6 +352,7 @@
             spawnDummyTargets();
             setupControls();
             setupMouseInteraction();
+            populateFullInventoryGUI();
 
             if (isMobile) setupMobileTouchControls();
 
@@ -350,6 +367,49 @@
             } else {
                 document.getElementById('joystick-zone').style.display = 'block';
                 document.getElementById('mobile-buttons').style.display = 'flex';
+            }
+        }
+
+        /* --- Full Inventory GUI System ('E' Key) --- */
+        function populateFullInventoryGUI() {
+            const container = document.getElementById('inv-grid-container');
+            container.innerHTML = '';
+
+            // Fill 27 Inventory Slots with 64 Stacks of Crystals, Obsidian, Totems, and Apples
+            const items = [
+                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
+                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
+                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
+                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
+                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
+                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
+                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }
+            ];
+
+            items.forEach(item => {
+                const slot = document.createElement('div');
+                slot.className = 'inv-slot';
+                slot.innerHTML = `${item.icon}<span class="count-badge">64</span>`;
+                slot.onclick = () => {
+                    counts[item.type] = 64;
+                    const badgeId = item.type === 'gapple' ? 'gapple-count' : `${item.type}-count`;
+                    const badge = document.getElementById(badgeId);
+                    if (badge) badge.innerText = 64;
+                    showActionText(`Refilled ${item.type.toUpperCase()} to 64!`);
+                };
+                container.appendChild(slot);
+            });
+        }
+
+        function toggleInventory() {
+            isInventoryOpen = !isInventoryOpen;
+            const invScreen = document.getElementById('inventory-screen');
+            if (isInventoryOpen) {
+                invScreen.style.display = 'flex';
+                if (!isMobile) controls.unlock();
+            } else {
+                invScreen.style.display = 'none';
+                if (!isMobile) controls.lock();
             }
         }
 
@@ -399,7 +459,7 @@
             aiSteveMesh.add(aiSteveHealthBarMesh);
 
             scene.add(aiSteveMesh);
-            showActionText("AI Steve Bot Joined (64 Totems)!");
+            showActionText("AI Steve Bot Joined (Filled Inventory)!");
         }
 
         function updateSteveHealthBarUI() {
@@ -407,7 +467,7 @@
             const fg = aiSteveHealthBarMesh.userData.fgMesh;
             const healthPct = Math.max(0, aiSteveHealth / maxHealth);
             fg.scale.x = healthPct;
-            fg.position.x = (healthPct - 1) * 0.68; // Align bar to left
+            fg.position.x = (healthPct - 1) * 0.68;
 
             if (healthPct > 0.5) fg.material.color.setHex(0x00ff00);
             else if (healthPct > 0.25) fg.material.color.setHex(0xffaa00);
@@ -430,7 +490,6 @@
                     scene.remove(aiSteveMesh);
                     aiSteveMesh = null;
 
-                    // Respawn AI Steve after 3 seconds
                     setTimeout(() => {
                         if (gameMode === 'ai') {
                             aiSteveTotems = 64;
@@ -447,13 +506,11 @@
         function updateAISteveLogic(delta) {
             if (!aiSteveMesh) return;
 
-            // Make health bar always face camera
             if (aiSteveHealthBarMesh) aiSteveHealthBarMesh.lookAt(camera.position);
 
             const playerPos = camera.position;
             const dist = aiSteveMesh.position.distanceTo(playerPos);
 
-            // Move towards player
             if (dist > 3.0) {
                 const dir = playerPos.clone().sub(aiSteveMesh.position).normalize();
                 aiSteveMesh.position.x += dir.x * 4.5 * delta;
@@ -461,7 +518,6 @@
                 aiSteveMesh.lookAt(playerPos.x, aiSteveMesh.position.y, playerPos.z);
             }
 
-            // AI Crystal Attack Logic
             aiSteveTimer += delta;
             if (aiSteveTimer > 2.0) {
                 aiSteveTimer = 0;
@@ -488,10 +544,7 @@
 
             peer = new Peer(myPeerID);
 
-            peer.on('open', () => {
-                showActionText("Hosting Room Code: " + roomCode);
-            });
-
+            peer.on('open', () => { showActionText("Hosting Room Code: " + roomCode); });
             peer.on('error', (err) => {
                 peer = new Peer(joinPeerID);
                 peer.on('open', () => {
@@ -527,10 +580,7 @@
         function broadcastPlayerPos() {
             if (peerConn && peerConn.open) {
                 peerConn.send({
-                    type: 'pos',
-                    x: camera.position.x,
-                    y: camera.position.y,
-                    z: camera.position.z
+                    type: 'pos', x: camera.position.x, y: camera.position.y, z: camera.position.z
                 });
             }
         }
@@ -730,6 +780,7 @@
                     case 'KeyA': moveLeft = true; break;
                     case 'KeyD': moveRight = true; break;
                     case 'Space': if (canJump) { velocity.y += 11.0; canJump = false; } break;
+                    case 'KeyE': toggleInventory(); break;
                     case 'Digit1': selectSlot(1); break;
                     case 'Digit2': selectSlot(2); break;
                     case 'Digit3': selectSlot(3); break;
@@ -778,7 +829,7 @@
                     const touch = e.changedTouches[i];
                     if (touch.identifier === touchMoveID) {
                         updateJoystick(touch);
-                    } else if (touch.identifier === touchLookID) {
+                    } else if (touch.identifier === touchLookID && !isInventoryOpen) {
                         const deltaX = touch.clientX - touchLookLastX;
                         const deltaY = touch.clientY - touchLookLastY;
 
@@ -826,6 +877,11 @@
                 moveRight = dx > 10;
             }
 
+            document.getElementById('btn-inv').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                toggleInventory();
+            });
+
             document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 if (canJump) { velocity.y += 11.0; canJump = false; }
@@ -856,6 +912,7 @@
 
         function setupMouseInteraction() {
             document.addEventListener('mousedown', (e) => {
+                if (isInventoryOpen) return;
                 if (!controls.isLocked && !isMobile) return;
                 if (e.button === 0) handleLeftClick();
                 else if (e.button === 2) handleRightClick();
@@ -877,7 +934,6 @@
 
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
-            // Detonate Crystal
             const crystalHits = raycaster.intersectObjects(endCrystals, true);
             if (crystalHits.length > 0) {
                 let hitObj = crystalHits[0].object;
@@ -886,7 +942,6 @@
                 return;
             }
 
-            // Direct Sword Attack on AI Steve
             if (aiSteveMesh) {
                 const steveHits = raycaster.intersectObjects(aiSteveMesh.children, true);
                 if (steveHits.length > 0) {
@@ -895,7 +950,6 @@
                 }
             }
 
-            // Target Dummies
             const dummyHits = raycaster.intersectObjects(dummyTargets.map(d => d.children[0]), true);
             if (dummyHits.length > 0) {
                 const dummy = dummyHits[0].object.parent;
@@ -983,7 +1037,6 @@
             flash.style.background = 'rgba(255, 255, 255, 0.6)';
             setTimeout(() => { flash.style.background = 'rgba(255, 255, 255, 0)'; }, 60);
 
-            // Damage player if in blast radius
             const playerDist = camera.position.distanceTo(explosionPos);
             if (playerDist < 6.0) {
                 const damage = Math.round((1 - playerDist / 6.0) * 8);
@@ -995,7 +1048,6 @@
                 velocity.z += knockbackDir.z * 12.0;
             }
 
-            // Damage AI Steve if in blast radius
             if (aiSteveMesh) {
                 const botDist = aiSteveMesh.position.distanceTo(explosionPos);
                 if (botDist < 6.0) {
@@ -1084,7 +1136,7 @@
             const delta = Math.min((time - prevTime) / 1000, 0.1); 
             prevTime = time;
 
-            if (controls.isLocked || isMobile) {
+            if ((controls.isLocked || isMobile) && !isInventoryOpen) {
                 velocity.x -= velocity.x * 10.0 * delta;
                 velocity.z -= velocity.z * 10.0 * delta;
                 velocity.y -= 25.0 * delta;

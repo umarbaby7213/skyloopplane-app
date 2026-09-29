@@ -3,65 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft Arena - 1v1 PvP</title>
+    <title>Minecraft 1v1 PvP Arena & Ender Dragon Boss</title>
     <style>
-        body {
+        /* ==========================================================================
+           1. CORE STYLES & MINECRAFT UI OVERLAYS
+           ========================================================================== */
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            overflow: hidden;
-            font-family: 'Courier New', Courier, monospace;
             user-select: none;
-            background-color: #000;
+            -webkit-user-select: none;
         }
 
-        #canvas-container {
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000000;
+            font-family: 'Minecraft', 'Courier New', Courier, monospace;
+        }
+
+        #game-container {
             width: 100vw;
             height: 100vh;
-        }
-
-        /* HUD & UI Overlay */
-        #hud {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            box-sizing: border-box;
-            padding: 10px;
-        }
-
-        /* Boss Bar */
-        #boss-bar-container {
-            margin-top: 15px;
-            text-align: center;
-        }
-
-        #boss-name {
-            color: #d35400;
-            font-weight: bold;
-            font-size: 18px;
-            text-shadow: 2px 2px #000;
-            margin-bottom: 5px;
-        }
-
-        #boss-bar-bg {
-            width: 300px;
-            height: 14px;
-            background: #2c3e50;
-            border: 2px solid #000;
-            border-radius: 2px;
-            overflow: hidden;
-        }
-
-        #boss-bar-fill {
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(180deg, #e74c3c, #c0392b);
+            position: relative;
         }
 
         /* Crosshair */
@@ -69,346 +35,893 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 16px;
-            height: 16px;
+            width: 20px;
+            height: 20px;
             transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 5;
         }
 
         #crosshair::before, #crosshair::after {
             content: '';
             position: absolute;
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 0 2px rgba(0,0,0,0.8);
         }
 
         #crosshair::before {
-            left: 7px;
+            left: 9px;
             top: 0;
             width: 2px;
-            height: 16px;
+            height: 20px;
         }
 
         #crosshair::after {
             left: 0;
-            top: 7px;
-            width: 16px;
+            top: 9px;
+            width: 20px;
             height: 2px;
         }
 
-        /* Hotbar & Status Bars */
-        #bottom-hud {
-            margin-bottom: 10px;
+        /* Boss Health Bar HUD */
+        #boss-hud {
+            position: absolute;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 380px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        #boss-name {
+            color: #ff55ff;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0px #000000, -1px -1px 0px #000000, 1px -1px 0px #000000, -1px 1px 0px #000000;
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+        }
+
+        #boss-bar-border {
+            width: 100%;
+            height: 18px;
+            background-color: #000000;
+            border: 2px solid #373737;
+            padding: 2px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.8);
+        }
+
+        #boss-bar-fill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #cc00cc 0%, #880088 100%);
+            transition: width 0.15s ease-out;
+        }
+
+        /* Bottom Player Status HUD */
+        #bottom-hud {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            pointer-events: none;
+            z-index: 5;
         }
 
         #status-bars {
             display: flex;
             justify-content: space-between;
-            width: 360px;
+            width: 364px;
             margin-bottom: 6px;
-            color: #fff;
-            font-size: 14px;
-            font-weight: bold;
-            text-shadow: 1px 1px #000;
+            padding: 0 4px;
         }
 
+        .status-row {
+            display: flex;
+            gap: 2px;
+        }
+
+        .heart, .food {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            background-size: contain;
+            background-repeat: no-repeat;
+            filter: drop-shadow(1px 1px 0px #000);
+        }
+
+        /* Hotbar Container */
         #hotbar {
             display: flex;
-            background: rgba(0, 0, 0, 0.5);
-            border: 4px solid #333;
-            border-radius: 4px;
+            background-color: rgba(0, 0, 0, 0.4);
+            border: 4px solid #3c3c3c;
+            border-radius: 2px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
-        .hotbar-slot {
-            width: 40px;
-            height: 40px;
-            border: 2px solid #555;
-            margin: 2px;
-            background: rgba(250, 250, 250, 0.15);
+        .slot {
+            width: 44px;
+            height: 44px;
+            border: 2px solid #8b8b8b;
+            background-color: rgba(139, 139, 139, 0.2);
+            margin: 1px;
             display: flex;
             justify-content: center;
             align-items: center;
-            color: #fff;
-            font-size: 11px;
-            text-shadow: 1px 1px #000;
+            position: relative;
         }
 
-        .hotbar-slot.active {
-            border-color: #fff;
-            background: rgba(255, 255, 255, 0.3);
+        .slot.active {
+            border: 3px solid #ffffff;
+            background-color: rgba(255, 255, 255, 0.35);
         }
 
-        /* Instructions Screen */
+        .slot-number {
+            position: absolute;
+            top: 2px;
+            left: 4px;
+            color: #ffffff;
+            font-size: 10px;
+            text-shadow: 1px 1px 0px #000;
+        }
+
+        .slot-icon {
+            width: 28px;
+            height: 28px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        /* Totem Resurrection Effect Overlay */
+        #totem-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle, rgba(255,215,0,0.6) 0%, rgba(255,140,0,0.2) 70%, rgba(0,0,0,0) 100%);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 8;
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        /* Pause / Lock Screen Overlay */
         #blocker {
             position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.75);
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.75);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             color: #ffffff;
-            text-align: center;
-            cursor: pointer;
             z-index: 10;
+            cursor: pointer;
         }
 
         #instructions {
-            font-size: 20px;
+            text-align: center;
+            max-width: 600px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #ffffff;
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        #instructions h1 {
+            font-size: 32px;
+            margin-bottom: 15px;
+            color: #ffff55;
+            text-shadow: 2px 2px 0px #3f3f00;
+        }
+
+        #instructions p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+            color: #ddd;
+        }
+
+        .key {
+            color: #55ffff;
+            font-weight: bold;
         }
     </style>
 
-    <!-- Import Three.js Engine & PointerLockControls -->
+    <!-- Three.js Library and PointerLockControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
 </head>
 <body>
 
-    <div id="blocker">
-        <div id="instructions">
-            <p style="font-size:36px">CLICK TO PLAY</p>
-            <p>
-                Move: WASD<br/>
-                Jump: SPACE<br/>
-                Look: MOUSE<br/>
-                Switch Item: Keys 1 - 4
-            </p>
-        </div>
-    </div>
+    <div id="game-container">
+        <div id="crosshair"></div>
+        <div id="totem-overlay"></div>
 
-    <div id="canvas-container"></div>
-
-    <div id="hud">
-        <div id="boss-bar-container">
+        <!-- Boss Health Bar -->
+        <div id="boss-hud">
             <div id="boss-name">Ender Dragon</div>
-            <div id="boss-bar-bg">
+            <div id="boss-bar-border">
                 <div id="boss-bar-fill"></div>
             </div>
         </div>
 
-        <div id="crosshair"></div>
-
+        <!-- Bottom Player HUD -->
         <div id="bottom-hud">
             <div id="status-bars">
-                <span>❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️</span>
-                <span>🍗🍗🍗🍗🍗🍗🍗🍗🍗🍗</span>
+                <div class="status-row" id="hearts-container"></div>
+                <div class="status-row" id="food-container"></div>
             </div>
             <div id="hotbar">
-                <div class="hotbar-slot active" id="slot-1">Sword</div>
-                <div class="hotbar-slot" id="slot-2">Crystal</div>
-                <div class="hotbar-slot" id="slot-3">Totem</div>
-                <div class="hotbar-slot" id="slot-4">Blocks</div>
+                <div class="slot active" id="slot-1"><span class="slot-number">1</span><div class="slot-icon" id="icon-sword"></div></div>
+                <div class="slot" id="slot-2"><span class="slot-number">2</span><div class="slot-icon" id="icon-crystal"></div></div>
+                <div class="slot" id="slot-3"><span class="slot-number">3</span><div class="slot-icon" id="icon-totem"></div></div>
+                <div class="slot" id="slot-4"><span class="slot-number">4</span><div class="slot-icon" id="icon-block"></div></div>
+            </div>
+        </div>
+
+        <!-- Pause Screen Blocker -->
+        <div id="blocker">
+            <div id="instructions">
+                <h1>DRDONUT 1v1 ARENA</h1>
+                <p>Click anywhere to enter the arena and fight!</p>
+                <p><span class="key">WASD</span> : Walk & Move</p>
+                <p><span class="key">SPACE</span> : Jump</p>
+                <p><span class="key">LEFT CLICK</span> : Attack Dragon / Break Block</p>
+                <p><span class="key">RIGHT CLICK</span> : Place Block / Use Crystal</p>
+                <p><span class="key">KEYS 1 - 4</span> : Switch Hotbar Slots</p>
             </div>
         </div>
     </div>
 
     <script>
-        // --- 1. GAME SETUP ---
-        let scene, camera, renderer, controls;
-        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
-        let canJump = false;
+        /* ==========================================================================
+           2. PROCEDURAL PIXEL-ART CANVAS TEXTURE GENERATOR
+           ========================================================================== */
+        const TextureGenerator = {
+            createCanvas(size = 16) {
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                return { canvas, ctx: canvas.getContext('2d') };
+            },
 
-        let prevTime = performance.now();
-        const velocity = new THREE.Vector3();
-        const direction = new THREE.Vector3();
-
-        // --- 2. TEXTURE GENERATOR (Procedural Pixel Art) ---
-        function createPixelTexture(type) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 16;
-            canvas.height = 16;
-            const ctx = canvas.getContext('2d');
-
-            if (type === 'grass') {
-                ctx.fillStyle = '#5b8731';
+            // Grass Block Top Texture
+            grassTop() {
+                const { canvas, ctx } = this.createCanvas(16);
+                ctx.fillStyle = '#5c8e32';
                 ctx.fillRect(0, 0, 16, 16);
-                for (let i = 0; i < 30; i++) {
-                    ctx.fillStyle = Math.random() > 0.5 ? '#4c7228' : '#6ba037';
-                    ctx.fillRect(Math.floor(Math.random() * 16), Math.floor(Math.random() * 16), 1, 1);
+                for (let i = 0; i < 40; i++) {
+                    const x = Math.floor(Math.random() * 16);
+                    const y = Math.floor(Math.random() * 16);
+                    ctx.fillStyle = Math.random() > 0.5 ? '#4d7828' : '#6ba33b';
+                    ctx.fillRect(x, y, 1, 1);
                 }
-            } else if (type === 'dirt') {
+                const tex = new THREE.CanvasTexture(canvas);
+                tex.magFilter = THREE.NearestFilter;
+                tex.minFilter = THREE.NearestFilter;
+                return tex;
+            },
+
+            // Dirt Side Texture
+            dirt() {
+                const { canvas, ctx } = this.createCanvas(16);
+                ctx.fillStyle = '#866043';
+                ctx.fillRect(0, 0, 16, 16);
+                for (let i = 0; i < 50; i++) {
+                    const x = Math.floor(Math.random() * 16);
+                    const y = Math.floor(Math.random() * 16);
+                    ctx.fillStyle = Math.random() > 0.5 ? '#573d2a' : '#9c7352';
+                    ctx.fillRect(x, y, 1, 1);
+                }
+                const tex = new THREE.CanvasTexture(canvas);
+                tex.magFilter = THREE.NearestFilter;
+                tex.minFilter = THREE.NearestFilter;
+                return tex;
+            },
+
+            // Grass Block Side (Grass Top Layer + Dirt Bottom Layer)
+            grassSide() {
+                const { canvas, ctx } = this.createCanvas(16);
+                // Dirt Base
                 ctx.fillStyle = '#866043';
                 ctx.fillRect(0, 0, 16, 16);
                 for (let i = 0; i < 40; i++) {
+                    const x = Math.floor(Math.random() * 16);
+                    const y = Math.floor(Math.random() * 16);
                     ctx.fillStyle = Math.random() > 0.5 ? '#573d2a' : '#9c7352';
-                    ctx.fillRect(Math.floor(Math.random() * 16), Math.floor(Math.random() * 16), 1, 1);
+                    ctx.fillRect(x, y, 1, 1);
                 }
-            } else if (type === 'stone') {
-                ctx.fillStyle = '#737373';
+                // Grass Overlay on top 4 pixels
+                ctx.fillStyle = '#5c8e32';
+                ctx.fillRect(0, 0, 16, 3);
+                for (let x = 0; x < 16; x++) {
+                    const hang = Math.floor(Math.random() * 3);
+                    ctx.fillRect(x, 3, 1, hang);
+                }
+                const tex = new THREE.CanvasTexture(canvas);
+                tex.magFilter = THREE.NearestFilter;
+                tex.minFilter = THREE.NearestFilter;
+                return tex;
+            },
+
+            // Cobblestone Texture
+            stone() {
+                const { canvas, ctx } = this.createCanvas(16);
+                ctx.fillStyle = '#6e6e6e';
+                ctx.fillRect(0, 0, 16, 16);
+                for (let i = 0; i < 60; i++) {
+                    const x = Math.floor(Math.random() * 16);
+                    const y = Math.floor(Math.random() * 16);
+                    ctx.fillStyle = Math.random() > 0.5 ? '#4a4a4a' : '#8a8a8a';
+                    ctx.fillRect(x, y, 1, 1);
+                }
+                // Cobblestone border cracks
+                ctx.fillStyle = '#3a3a3a';
+                ctx.fillRect(0, 7, 16, 1);
+                ctx.fillRect(7, 0, 1, 8);
+                ctx.fillRect(11, 8, 1, 8);
+                const tex = new THREE.CanvasTexture(canvas);
+                tex.magFilter = THREE.NearestFilter;
+                tex.minFilter = THREE.NearestFilter;
+                return tex;
+            },
+
+            // Obsidian Texture
+            obsidian() {
+                const { canvas, ctx } = this.createCanvas(16);
+                ctx.fillStyle = '#100c1c';
                 ctx.fillRect(0, 0, 16, 16);
                 for (let i = 0; i < 40; i++) {
-                    ctx.fillStyle = Math.random() > 0.5 ? '#525252' : '#8a8a8a';
-                    ctx.fillRect(Math.floor(Math.random() * 16), Math.floor(Math.random() * 16), 1, 1);
+                    const x = Math.floor(Math.random() * 16);
+                    const y = Math.floor(Math.random() * 16);
+                    ctx.fillStyle = Math.random() > 0.5 ? '#231b38' : '#3b2d5c';
+                    ctx.fillRect(x, y, 1, 1);
                 }
+                const tex = new THREE.CanvasTexture(canvas);
+                tex.magFilter = THREE.NearestFilter;
+                tex.minFilter = THREE.NearestFilter;
+                return tex;
+            },
+
+            // Bedrock Texture
+            bedrock() {
+                const { canvas, ctx } = this.createCanvas(16);
+                ctx.fillStyle = '#333333';
+                ctx.fillRect(0, 0, 16, 16);
+                for (let i = 0; i < 70; i++) {
+                    const x = Math.floor(Math.random() * 16);
+                    const y = Math.floor(Math.random() * 16);
+                    ctx.fillStyle = Math.random() > 0.5 ? '#111111' : '#555555';
+                    ctx.fillRect(x, y, 1, 1);
+                }
+                const tex = new THREE.CanvasTexture(canvas);
+                tex.magFilter = THREE.NearestFilter;
+                tex.minFilter = THREE.NearestFilter;
+                return tex;
             }
+        };
 
-            const texture = new THREE.CanvasTexture(canvas);
-            texture.magFilter = THREE.NearestFilter; // Preserve Minecraft pixelation
-            texture.minFilter = THREE.NearestFilter;
-            return texture;
-        }
+        /* ==========================================================================
+           3. GAME CONSTANTS & STATE MANAGEMENT
+           ========================================================================== */
+        const ARENA_SIZE = 24;
+        const WALL_HEIGHT = 5;
+        
+        const PlayerState = {
+            maxHealth: 20,
+            health: 20,
+            food: 20,
+            hasTotem: true,
+            activeSlot: 1,
+            position: new THREE.Vector3(),
+            velocity: new THREE.Vector3(),
+            canJump: false
+        };
 
-        // --- 3. INIT SCENE ---
-        function init() {
+        const BossState = {
+            maxHealth: 200,
+            health: 200,
+            angle: 0,
+            position: new THREE.Vector3(ARENA_SIZE / 2, 8, ARENA_SIZE / 2),
+            isAlive: true
+        };
+
+        /* ==========================================================================
+           4. THREE.JS ENGINE INITIALIZATION
+           ========================================================================== */
+        let scene, camera, renderer, controls;
+        let raycaster, mouse;
+        const blocksMap = new Map(); // Spatial Hash Map for world blocks
+
+        function initEngine() {
+            // Scene Setup
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x78a7ff); // Sky blue
-            scene.fog = new THREE.Fog(0x78a7ff, 10, 60);
+            scene.background = new THREE.Color(0x78a7ff);
+            scene.fog = new THREE.FogExp2(0x78a7ff, 0.015);
 
+            // Camera Setup
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
+            // WebGL Renderer Setup
+            renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('game-container').appendChild(renderer.domElement);
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(20, 40, 20);
-            scene.add(dirLight);
-
-            // Controls
+            // Pointer Lock Controls Setup
             controls = new THREE.PointerLockControls(camera, document.body);
 
             const blocker = document.getElementById('blocker');
-            blocker.addEventListener('click', () => {
-                controls.lock();
-            });
-
-            controls.addEventListener('lock', () => {
-                blocker.style.display = 'none';
-            });
-
-            controls.addEventListener('unlock', () => {
-                blocker.style.display = 'flex';
-            });
+            blocker.addEventListener('click', () => controls.lock());
+            controls.addEventListener('lock', () => blocker.style.display = 'none');
+            controls.addEventListener('unlock', () => blocker.style.display = 'flex');
 
             scene.add(controls.getObject());
+            controls.getObject().position.set(ARENA_SIZE / 2, 2.5, ARENA_SIZE / 2);
 
-            // Keybindings
-            const onKeyDown = function (event) {
-                switch (event.code) {
-                    case 'KeyW': moveForward = true; break;
-                    case 'KeyA': moveLeft = true; break;
-                    case 'KeyS': moveBackward = true; break;
-                    case 'KeyD': moveRight = true; break;
-                    case 'Space': if (canJump === true) velocity.y += 12; canJump = false; break;
-                    case 'Digit1': selectSlot(1); break;
-                    case 'Digit2': selectSlot(2); break;
-                    case 'Digit3': selectSlot(3); break;
-                    case 'Digit4': selectSlot(4); break;
-                }
-            };
+            // Lighting Setup
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
+            scene.add(ambientLight);
 
-            const onKeyUp = function (event) {
-                switch (event.code) {
-                    case 'KeyW': moveForward = false; break;
-                    case 'KeyA': moveLeft = false; break;
-                    case 'KeyS': moveBackward = false; break;
-                    case 'KeyD': moveRight = false; break;
-                }
-            };
+            const sunLight = new THREE.DirectionalLight(0xffffff, 0.85);
+            sunLight.position.set(30, 50, 20);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            sunLight.shadow.camera.near = 0.5;
+            sunLight.shadow.camera.far = 150;
+            const d = 25;
+            sunLight.shadow.camera.left = -d;
+            sunLight.shadow.camera.right = d;
+            sunLight.shadow.camera.top = d;
+            sunLight.shadow.camera.bottom = -d;
+            scene.add(sunLight);
 
-            document.addEventListener('keydown', onKeyDown);
-            document.addEventListener('keyup', onKeyUp);
+            // Raycaster Setup for Attacks and Block Mining
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2(0, 0);
 
-            // Generate Arena Voxels
-            buildArena();
-
-            // Create Player Held Sword Model
-            createDiamondSword();
-
-            // Renderer setup
-            renderer = new THREE.WebGLRenderer({ antialias: false });
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            // Initialize Subsystems
+            buildWorldArena();
+            initHeldItems();
+            initEnderDragon();
+            setupInputListeners();
+            renderHUDHearts();
 
             window.addEventListener('resize', onWindowResize);
         }
 
-        // --- 4. BUILD WORLD BLOCK ARENA ---
-        function buildArena() {
-            const grassTex = createPixelTexture('grass');
-            const dirtTex = createPixelTexture('dirt');
-            const stoneTex = createPixelTexture('stone');
+        /* ==========================================================================
+           5. WORLD ARENA GENERATOR (DrDonut Grass + Stone Wall Layout)
+           ========================================================================== */
+        function buildWorldArena() {
+            const grassTopTex = TextureGenerator.grassTop();
+            const grassSideTex = TextureGenerator.grassSide();
+            const dirtTex = TextureGenerator.dirt();
+            const stoneTex = TextureGenerator.stone();
+            const obsidianTex = TextureGenerator.obsidian();
+            const bedrockTex = TextureGenerator.bedrock();
 
-            const grassMat = new THREE.MeshLambertMaterial({ map: grassTex });
-            const dirtMat = new THREE.MeshLambertMaterial({ map: dirtTex });
+            const grassMaterials = [
+                new THREE.MeshLambertMaterial({ map: grassSideTex }), // Right
+                new THREE.MeshLambertMaterial({ map: grassSideTex }), // Left
+                new THREE.MeshLambertMaterial({ map: grassTopTex }),  // Top
+                new THREE.MeshLambertMaterial({ map: dirtTex }),      // Bottom
+                new THREE.MeshLambertMaterial({ map: grassSideTex }), // Front
+                new THREE.MeshLambertMaterial({ map: grassSideTex })  // Back
+            ];
+
             const stoneMat = new THREE.MeshLambertMaterial({ map: stoneTex });
+            const obsidianMat = new THREE.MeshLambertMaterial({ map: obsidianTex });
+            const bedrockMat = new THREE.MeshLambertMaterial({ map: bedrockTex });
 
             const boxGeo = new THREE.BoxGeometry(1, 1, 1);
 
-            // Construct floor platform (30x30 blocks)
-            for (let x = -15; x < 15; x++) {
-                for (let z = -15; z < 15; z++) {
-                    // Top grass block
-                    const block = new THREE.Mesh(boxGeo, grassMat);
-                    block.position.set(x, 0, z);
-                    scene.add(block);
+            // Helper to add block to scene and collision map
+            function addBlock(x, y, z, material) {
+                const mesh = new THREE.Mesh(boxGeo, material);
+                mesh.position.set(x, y, z);
+                mesh.receiveShadow = true;
+                mesh.castShadow = true;
+                scene.add(mesh);
+                blocksMap.set(`${x},${y},${z}`, mesh);
+            }
 
-                    // Dirt block underneath
-                    const subBlock = new THREE.Mesh(boxGeo, dirtMat);
-                    subBlock.position.set(x, -1, z);
-                    scene.add(subBlock);
+            // 1. Generate Grass Floor and Bedrock Base Layer
+            for (let x = 0; x < ARENA_SIZE; x++) {
+                for (let z = 0; z < ARENA_SIZE; z++) {
+                    addBlock(x, 0, z, grassMaterials); // Grass Top Layer
+                    addBlock(x, -1, z, bedrockMat);     // Bedrock Bottom
                 }
             }
 
-            // Outer Arena Wall
-            for (let i = -15; i <= 15; i++) {
-                for (let y = 1; y <= 3; y++) {
-                    let w1 = new THREE.Mesh(boxGeo, stoneMat);
-                    w1.position.set(i, y, -15);
-                    scene.add(w1);
+            // 2. Generate Surrounding Stone & Obsidian Pillars Walls
+            for (let y = 1; y <= WALL_HEIGHT; y++) {
+                for (let i = -1; i <= ARENA_SIZE; i++) {
+                    // Decide if corner pillar (Obsidian) or main wall (Stone)
+                    const isCorner = (i === -1 || i === ARENA_SIZE);
+                    const mat = isCorner ? obsidianMat : stoneMat;
 
-                    let w2 = new THREE.Mesh(boxGeo, stoneMat);
-                    w2.position.set(i, y, 15);
-                    scene.add(w2);
-
-                    let w3 = new THREE.Mesh(boxGeo, stoneMat);
-                    w3.position.set(-15, y, i);
-                    scene.add(w3);
-
-                    let w4 = new THREE.Mesh(boxGeo, stoneMat);
-                    w4.position.set(15, y, i);
-                    scene.add(w4);
+                    addBlock(i, y, -1, mat);
+                    addBlock(i, y, ARENA_SIZE, mat);
+                    addBlock(-1, y, i, mat);
+                    addBlock(ARENA_SIZE, y, i, mat);
                 }
             }
         }
 
-        // --- 5. 3D DIAMOND SWORD MODEL ---
-        let swordGroup;
-        function createDiamondSword() {
-            swordGroup = new THREE.Group();
+        /* ==========================================================================
+           6. 3D HELD ITEMS IN PLAYER HAND (Diamond Sword, Crystal, Totem)
+           ========================================================================== */
+        let heldItemsGroup;
+        let swordMesh, crystalMesh, totemMesh, blockMesh;
 
-            const cyanMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-            const brownMat = new THREE.MeshBasicMaterial({ color: 0x5c4033 });
+        function initHeldItems() {
+            heldItemsGroup = new THREE.Group();
+            camera.add(heldItemsGroup);
+
+            // Material Palette for Items
+            const diamondMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+            const woodMat = new THREE.MeshBasicMaterial({ color: 0x5c4033 });
+            const goldMat = new THREE.MeshBasicMaterial({ color: 0xffd700 });
+            const emeraldMat = new THREE.MeshBasicMaterial({ color: 0x50c878 });
+            const glassMat = new THREE.MeshPhongMaterial({ color: 0xff88ff, transparent: true, opacity: 0.8 });
+
+            // 1. DIAMOND SWORD MODEL
+            swordMesh = new THREE.Group();
             const pixelGeo = new THREE.BoxGeometry(0.04, 0.04, 0.04);
-
             // Blade
-            for (let i = 0; i < 8; i++) {
-                const p = new THREE.Mesh(pixelGeo, cyanMat);
+            for (let i = 0; i < 9; i++) {
+                const p = new THREE.Mesh(pixelGeo, diamondMat);
                 p.position.set(i * 0.03, i * 0.03, 0);
-                swordGroup.add(p);
+                swordMesh.add(p);
             }
+            // Handle
+            for (let i = -1; i >= -3; i--) {
+                const p = new THREE.Mesh(pixelGeo, woodMat);
+                p.position.set(i * 0.03, i * 0.03, 0);
+                swordMesh.add(p);
+            }
+            swordMesh.position.set(0.35, -0.3, -0.5);
+            swordMesh.rotation.y = -Math.PI / 4;
+            swordMesh.rotation.z = Math.PI / 6;
 
-            // Hilt & Handle
-            const handle = new THREE.Mesh(pixelGeo, brownMat);
-            handle.position.set(-0.03, -0.03, 0);
-            swordGroup.add(handle);
+            // 2. END CRYSTAL MODEL
+            crystalMesh = new THREE.Group();
+            const outerGeo = new THREE.OctahedronGeometry(0.12, 0);
+            const outerCrystal = new THREE.Mesh(outerGeo, glassMat);
+            const innerGeo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
+            const innerCore = new THREE.Mesh(innerGeo, new THREE.MeshBasicMaterial({ color: 0x880088 }));
+            crystalMesh.add(outerCrystal);
+            crystalMesh.add(innerCore);
+            crystalMesh.position.set(0.35, -0.3, -0.5);
+            crystalMesh.visible = false;
 
-            // Position relative to player camera view
-            swordGroup.position.set(0.3, -0.3, -0.5);
-            swordGroup.rotation.y = -Math.PI / 4;
-            swordGroup.rotation.z = Math.PI / 6;
+            // 3. TOTEM OF UNDYING MODEL
+            totemMesh = new THREE.Group();
+            const bodyGeo = new THREE.BoxGeometry(0.1, 0.16, 0.06);
+            const totemBody = new THREE.Mesh(bodyGeo, goldMat);
+            const eyesGeo = new THREE.BoxGeometry(0.08, 0.03, 0.07);
+            const totemEyes = new THREE.Mesh(eyesGeo, emeraldMat);
+            totemEyes.position.set(0, 0.04, 0);
+            totemMesh.add(totemBody);
+            totemMesh.add(totemEyes);
+            totemMesh.position.set(0.35, -0.3, -0.5);
+            totemMesh.visible = false;
 
-            camera.add(swordGroup);
+            // 4. HELD VOXEL BLOCK MODEL
+            const miniBoxGeo = new THREE.BoxGeometry(0.15, 0.15, 0.15);
+            blockMesh = new THREE.Mesh(miniBoxGeo, new THREE.MeshLambertMaterial({ map: TextureGenerator.stone() }));
+            blockMesh.position.set(0.35, -0.3, -0.5);
+            blockMesh.visible = false;
+
+            heldItemsGroup.add(swordMesh);
+            heldItemsGroup.add(crystalMesh);
+            heldItemsGroup.add(totemMesh);
+            heldItemsGroup.add(blockMesh);
         }
 
-        function selectSlot(slotNum) {
-            document.querySelectorAll('.hotbar-slot').forEach(el => el.classList.remove('active'));
-            document.getElementById(`slot-${slotNum}`).classList.add('active');
+        function updateHeldItemVisibility(slot) {
+            PlayerState.activeSlot = slot;
+            swordMesh.visible = (slot === 1);
+            crystalMesh.visible = (slot === 2);
+            totemMesh.visible = (slot === 3);
+            blockMesh.visible = (slot === 4);
+
+            // Update Hotbar UI styling
+            document.querySelectorAll('.slot').forEach((el, idx) => {
+                if (idx + 1 === slot) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+        }
+
+        /* ==========================================================================
+           7. ENDER DRAGON BOSS AI & ANIMATION
+           ========================================================================== */
+        let dragonGroup, leftWingGroup, rightWingGroup;
+
+        function initEnderDragon() {
+            dragonGroup = new THREE.Group();
+
+            const dragonMat = new THREE.MeshPhongMaterial({ color: 0x140d1e, shininess: 30 });
+            const wingMembraneMat = new THREE.MeshPhongMaterial({ color: 0x08030c, side: THREE.DoubleSide });
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xcc00cc });
+
+            // 1. Body Center
+            const bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.4, 4.0), dragonMat);
+            bodyMesh.castShadow = true;
+            dragonGroup.add(bodyMesh);
+
+            // 2. Dragon Head & Eyes
+            const headMesh = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.0, 1.5), dragonMat);
+            headMesh.position.set(0, 0.6, -2.6);
+            const leftEye = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), eyeMat);
+            leftEye.position.set(-0.5, 0.2, -3.2);
+            const rightEye = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), eyeMat);
+            rightEye.position.set(0.5, 0.2, -3.2);
+            dragonGroup.add(headMesh);
+            dragonGroup.add(leftEye);
+            dragonGroup.add(rightEye);
+
+            // 3. Tail Segments
+            for (let i = 1; i <= 4; i++) {
+                const tailSeg = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 1.0), dragonMat);
+                tailSeg.position.set(0, 0.2, 2.0 + (i * 0.9));
+                dragonGroup.add(tailSeg);
+            }
+
+            // 4. Left Wing
+            leftWingGroup = new THREE.Group();
+            const lWingBone = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.2, 0.4), dragonMat);
+            lWingBone.position.set(-1.75, 0, 0);
+            const lWingSkin = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 2.5), wingMembraneMat);
+            lWingSkin.position.set(-1.75, 0, 1.25);
+            lWingSkin.rotation.x = Math.PI / 2;
+            leftWingGroup.add(lWingBone);
+            leftWingGroup.add(lWingSkin);
+            leftWingGroup.position.set(-1.2, 0.4, -0.5);
+
+            // 5. Right Wing
+            rightWingGroup = new THREE.Group();
+            const rWingBone = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.2, 0.4), dragonMat);
+            rWingBone.position.set(1.75, 0, 0);
+            const rWingSkin = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 2.5), wingMembraneMat);
+            rWingSkin.position.set(1.75, 0, 1.25);
+            rWingSkin.rotation.x = Math.PI / 2;
+            rightWingGroup.add(rWingBone);
+            rightWingGroup.add(rWingSkin);
+            rightWingGroup.position.set(1.2, 0.4, -0.5);
+
+            dragonGroup.add(leftWingGroup);
+            dragonGroup.add(rightWingGroup);
+
+            dragonGroup.position.copy(BossState.position);
+            scene.add(dragonGroup);
+        }
+
+        function updateDragonAI(delta) {
+            if (!BossState.isAlive) return;
+
+            // Circular Flight Pattern Pathing
+            BossState.angle += delta * 1.2;
+            const radius = 8.0;
+            const centerX = ARENA_SIZE / 2;
+            const centerZ = ARENA_SIZE / 2;
+
+            const targetX = centerX + Math.cos(BossState.angle) * radius;
+            const targetZ = centerZ + Math.sin(BossState.angle) * radius;
+            const targetY = 7.0 + Math.sin(BossState.angle * 2.0) * 1.5;
+
+            dragonGroup.position.set(targetX, targetY, targetZ);
+
+            // Rotate dragon towards its flight direction
+            dragonGroup.rotation.y = -BossState.angle + Math.PI / 2;
+
+            // Wing Flap Animation
+            const flapSpeed = Math.sin(BossState.angle * 8.0) * 0.4;
+            leftWingGroup.rotation.z = flapSpeed;
+            rightWingGroup.rotation.z = -flapSpeed;
+        }
+
+        function damageDragon(amount) {
+            if (!BossState.isAlive) return;
+
+            BossState.health = Math.max(0, BossState.health - amount);
+            const healthPercent = (BossState.health / BossState.maxHealth) * 100;
+            document.getElementById('boss-bar-fill').style.width = healthPercent + '%';
+
+            if (BossState.health <= 0) {
+                BossState.isAlive = false;
+                scene.remove(dragonGroup);
+                document.getElementById('boss-name').innerText = "VICTORY! ENDER DRAGON DEFEATED";
+                document.getElementById('boss-bar-fill').style.width = '0%';
+            }
+        }
+
+        /* ==========================================================================
+           8. PLAYER COMBAT, TOTEM REVIVE & INTERACTION LOGIC
+           ========================================================================== */
+        function triggerTotemResurrection() {
+            PlayerState.hasTotem = false;
+            PlayerState.health = PlayerState.maxHealth * 0.5; // Restore 50% HP
+            renderHUDHearts();
+
+            // Screen Overlay Animation
+            const overlay = document.getElementById('totem-overlay');
+            overlay.style.opacity = '1';
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+            }, 1200);
+        }
+
+        function takePlayerDamage(amount) {
+            PlayerState.health -= amount;
+            if (PlayerState.health <= 0) {
+                if (PlayerState.hasTotem) {
+                    triggerTotemResurrection();
+                } else {
+                    // Respawn Player
+                    PlayerState.health = PlayerState.maxHealth;
+                    controls.getObject().position.set(ARENA_SIZE / 2, 2.5, ARENA_SIZE / 2);
+                    renderHUDHearts();
+                }
+            } else {
+                renderHUDHearts();
+            }
+        }
+
+        function handlePrimaryAttack() {
+            // Perform Raycast forward from crosshair
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
+
+            if (intersects.length > 0) {
+                const hitObj = intersects[0].object;
+
+                // Check if hit Ender Dragon
+                let curr = hitObj;
+                let hitDragon = false;
+                while (curr) {
+                    if (curr === dragonGroup) {
+                        hitDragon = true;
+                        break;
+                    }
+                    curr = curr.parent;
+                }
+
+                if (hitDragon) {
+                    damageDragon(20);
+                    // Attack Swing Animation
+                    swordMesh.rotation.x -= 0.5;
+                    setTimeout(() => swordMesh.rotation.x += 0.5, 100);
+                } else {
+                    // Break block if within reach distance
+                    if (intersects[0].distance < 4.5 && hitObj.type === "Mesh") {
+                        const pos = hitObj.position;
+                        // Protect bedrock base layer at y = -1
+                        if (pos.y > -1) {
+                            scene.remove(hitObj);
+                            blocksMap.delete(`${pos.x},${pos.y},${pos.z}`);
+                        }
+                    }
+                }
+            }
+        }
+
+        /* ==========================================================================
+           9. INPUT CONTROLS & PHYSICS ENGINE
+           ========================================================================== */
+        const keyState = {};
+
+        function setupInputListeners() {
+            document.addEventListener('keydown', (e) => {
+                keyState[e.code] = true;
+                if (e.code >= 'Digit1' && e.code <= 'Digit4') {
+                    updateHeldItemVisibility(parseInt(e.code.replace('Digit', '')));
+                }
+            });
+
+            document.addEventListener('keyup', (e) => {
+                keyState[e.code] = false;
+            });
+
+            document.addEventListener('mousedown', (e) => {
+                if (!controls.isLocked) return;
+                if (e.button === 0) {
+                    handlePrimaryAttack();
+                }
+            });
+        }
+
+        function updatePlayerPhysics(delta) {
+            if (!controls.isLocked) return;
+
+            const vel = PlayerState.velocity;
+
+            // Friction / Velocity Decay
+            vel.x -= vel.x * 10.0 * delta;
+            vel.z -= vel.z * 10.0 * delta;
+            vel.y -= 9.8 * 28.0 * delta; // Gravity
+
+            // Direction Vectors
+            const moveForward = keyState['KeyW'] || false;
+            const moveBackward = keyState['KeyS'] || false;
+            const moveLeft = keyState['KeyA'] || false;
+            const moveRight = keyState['KeyD'] || false;
+
+            const dirZ = Number(moveForward) - Number(moveBackward);
+            const dirX = Number(moveRight) - Number(moveLeft);
+            const inputDir = new THREE.Vector3(dirX, 0, -dirZ).normalize();
+
+            if (moveForward || moveBackward) vel.z += inputDir.z * 50.0 * delta;
+            if (moveLeft || moveRight) vel.x += inputDir.x * 50.0 * delta;
+
+            // Jump Action
+            if (keyState['Space'] && PlayerState.canJump) {
+                vel.y = 11.0;
+                PlayerState.canJump = false;
+            }
+
+            // Apply Movements
+            controls.moveRight(vel.x * delta);
+            controls.moveForward(-vel.z * delta);
+
+            const playerObj = controls.getObject();
+            playerObj.position.y += vel.y * delta;
+
+            // Floor Ground Collision (Grass at Y=0 -> Player Eye Level at Y=1.8)
+            if (playerObj.position.y < 1.8) {
+                vel.y = 0;
+                playerObj.position.y = 1.8;
+                PlayerState.canJump = true;
+            }
+
+            // Idle Weapon Bobbing Motion
+            if (heldItemsGroup) {
+                const speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
+                const bob = Math.sin(performance.now() * 0.008) * (speed > 0.1 ? 0.015 : 0.005);
+                heldItemsGroup.position.y = bob;
+            }
+        }
+
+        /* ==========================================================================
+           10. HUD RENDERERS & GAME LOOP
+           ========================================================================== */
+        function renderHUDHearts() {
+            const container = document.getElementById('hearts-container');
+            container.innerHTML = '';
+            const totalHearts = PlayerState.maxHealth / 2;
+            const currentHearts = PlayerState.health / 2;
+
+            for (let i = 0; i < totalHearts; i++) {
+                const heart = document.createElement('div');
+                heart.className = 'heart';
+                if (i < Math.floor(currentHearts)) {
+                    heart.style.backgroundImage = 'radial-gradient(circle, #ff0000 60%, #990000 100%)';
+                } else {
+                    heart.style.backgroundImage = 'radial-gradient(circle, #333333 60%, #111111 100%)';
+                }
+                container.appendChild(heart);
+            }
         }
 
         function onWindowResize() {
@@ -417,50 +930,24 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // --- 6. GAME LOOP ---
+        let clock = new THREE.Clock();
+
         function animate() {
             requestAnimationFrame(animate);
 
-            const time = performance.now();
+            const delta = Math.min(clock.getDelta(), 0.1);
 
-            if (controls.isLocked === true) {
-                const delta = (time - prevTime) / 1000;
+            updatePlayerPhysics(delta);
+            updateDragonAI(delta);
 
-                velocity.x -= velocity.x * 10.0 * delta;
-                velocity.z -= velocity.z * 10.0 * delta;
-                velocity.y -= 9.8 * 30.0 * delta; // Gravity
-
-                direction.z = Number(moveForward) - Number(moveBackward);
-                direction.x = Number(moveRight) - Number(moveLeft);
-                direction.normalize();
-
-                if (moveForward || moveBackward) velocity.z -= direction.z * 100.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= direction.x * 100.0 * delta;
-
-                controls.moveRight(-velocity.x * delta);
-                controls.moveForward(-velocity.z * delta);
-
-                controls.getObject().position.y += (velocity.y * delta);
-
-                // Floor Collision Check
-                if (controls.getObject().position.y < 1.8) {
-                    velocity.y = 0;
-                    controls.getObject().position.y = 1.8;
-                    canJump = true;
-                }
-
-                // Subtle Sword Idle Motion
-                if (swordGroup) {
-                    swordGroup.position.y = -0.3 + Math.sin(time * 0.005) * 0.01;
-                }
-            }
-
-            prevTime = time;
             renderer.render(scene, camera);
         }
 
-        init();
-        animate();
+        // Start Engine On Load
+        window.addEventListener('DOMContentLoaded', () => {
+            initEngine();
+            animate();
+        });
     </script>
 </body>
 </html>

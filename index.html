@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Donut SMP - Arena & Custom Hearts</title>
+    <title>Donut SMP Arena - All In One</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
@@ -15,12 +15,16 @@
         #crosshair::before { left: 7px; top: 0; width: 2px; height: 16px; }
         #crosshair::after { left: 0; top: 7px; width: 16px; height: 2px; }
         
-        /* HUD & Custom Pixel Hearts */
+        /* HUD Layout */
         #hud { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 5; }
-        .hearts-bar { display: flex; gap: 4px; background: rgba(0, 0, 0, 0.5); padding: 8px 12px; border-radius: 4px; margin-bottom: 8px; }
-        .heart-wrapper { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
         
-        /* Pure CSS Pixel Art Minecraft Heart */
+        /* Hearts & Food Bars Row */
+        .status-wrapper { display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px; gap: 20px; }
+        
+        .hearts-bar, .food-bar { display: flex; gap: 2px; background: rgba(0, 0, 0, 0.5); padding: 6px 10px; border-radius: 4px; }
+        .heart-wrapper, .shank-wrapper { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+        
+        /* Pixel Art Minecraft Heart */
         .pixel-heart {
             width: 9px;
             height: 9px;
@@ -35,15 +39,53 @@
                 2px 6px 0 #000, 3px 6px 0 #e02424, 4px 6px 0 #e02424, 5px 6px 0 #9c0000, 6px 6px 0 #000,
                 3px 7px 0 #000, 4px 7px 0 #e02424, 5px 7px 0 #000,
                 4px 8px 0 #000;
+            transform: scale(2.2);
+        }
+
+        /* Pixel Art Minecraft Food Shank */
+        .pixel-shank {
+            width: 9px;
+            height: 9px;
+            image-rendering: pixelated;
+            box-shadow: 
+                4px 0px 0 #000, 5px 0px 0 #000,
+                3px 1px 0 #000, 4px 1px 0 #d1a880, 5px 1px 0 #bd6328, 6px 1px 0 #000,
+                2px 2px 0 #000, 3px 2px 0 #d1a880, 4px 2px 0 #bd6328, 5px 2px 0 #8b3a0f, 6px 2px 0 #000,
+                1px 3px 0 #000, 2px 3px 0 #bd6328, 3px 3px 0 #bd6328, 4px 3px 0 #8b3a0f, 5px 3px 0 #5c2204, 6px 3px 0 #000,
+                0px 4px 0 #000, 1px 4px 0 #bd6328, 2px 4px 0 #8b3a0f, 3px 4px 0 #8b3a0f, 4px 4px 0 #5c2204, 5px 4px 0 #000,
+                0px 5px 0 #000, 1px 5px 0 #8b3a0f, 2px 5px 0 #8b3a0f, 3px 5px 0 #000,
+                0px 6px 0 #000, 1px 6px 0 #d1a880, 2px 6px 0 #000,
+                1px 7px 0 #000, 2px 7px 0 #ffffff, 3px 7px 0 #000,
+                2px 8px 0 #000;
+            transform: scale(2.2);
+        }
+
+        /* Pixel Art Golden Apple Icon */
+        .pixel-gapple {
+            width: 9px;
+            height: 9px;
+            image-rendering: pixelated;
+            box-shadow: 
+                4px 0px 0 #5c2204, 5px 0px 0 #5c2204,
+                4px 1px 0 #5c2204,
+                2px 2px 0 #000, 3px 2px 0 #000, 6px 2px 0 #000, 7px 2px 0 #000,
+                1px 3px 0 #000, 2px 3px 0 #fff3a1, 3px 3px 0 #ffd700, 4px 3px 0 #000, 5px 3px 0 #000, 6px 3px 0 #ffd700, 7px 3px 0 #ffd700, 8px 3px 0 #000,
+                0px 4px 0 #000, 1px 4px 0 #ffffff, 2px 4px 0 #ffd700, 3px 4px 0 #ffaa00, 4px 4px 0 #ffaa00, 5px 4px 0 #ffaa00, 6px 4px 0 #ffaa00, 7px 4px 0 #c77b00, 8px 4px 0 #000,
+                0px 5px 0 #000, 1px 5px 0 #ffd700, 2px 5px 0 #ffaa00, 3px 5px 0 #ffaa00, 4px 5px 0 #ffaa00, 5px 5px 0 #ffaa00, 6px 5px 0 #ffaa00, 7px 5px 0 #c77b00, 8px 5px 0 #000,
+                0px 6px 0 #000, 1px 6px 0 #ffaa00, 2px 6px 0 #ffaa00, 3px 6px 0 #ffaa00, 4px 6px 0 #ffaa00, 5px 6px 0 #ffaa00, 6px 6px 0 #ffaa00, 7px 6px 0 #c77b00, 8px 6px 0 #000,
+                1px 7px 0 #000, 2px 7px 0 #ffaa00, 3px 7px 0 #ffaa00, 4px 7px 0 #ffaa00, 5px 7px 0 #ffaa00, 6px 7px 0 #c77b00, 7px 7px 0 #000,
+                2px 8px 0 #000, 3px 8px 0 #ffaa00, 4px 8px 0 #ffaa00, 5px 8px 0 #c77b00, 6px 8px 0 #000,
+                3px 9px 0 #000, 4px 9px 0 #ffaa00, 5px 9px 0 #000,
+                4px 10px 0 #000;
             transform: scale(2);
         }
 
-        /* Hotbar */
+        /* Hotbar UI */
         #hotbar { display: flex; background: rgba(0, 0, 0, 0.6); border: 4px solid #3c3c3c; border-radius: 4px; }
         .slot { width: 48px; height: 48px; border: 3px solid #8b8b8b; background: rgba(139, 139, 139, 0.3); margin: 2px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 20px; }
         .slot.active { border-color: #ffffff; background: rgba(255, 255, 255, 0.5); box-shadow: inset 0 0 5px #fff; }
 
-        /* Start Blocker Screen */
+        /* Start Screen Blocker */
         #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 10; cursor: pointer; }
         #instructions { text-align: center; padding: 25px; background: rgba(20, 20, 20, 0.95); border: 3px solid #ff0055; box-shadow: 0 0 25px #ff0055; border-radius: 8px; }
     </style>
@@ -54,25 +96,43 @@
     <div id="game-container">
         <div id="crosshair"></div>
         <div id="hud">
-            <div class="hearts-bar">
-                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
-                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
-                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
-                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
-                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
-                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
-                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
-                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
-                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
-                <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+            <!-- Health & Hunger Bars -->
+            <div class="status-wrapper">
+                <div class="hearts-bar">
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                    <div class="heart-wrapper"><div class="pixel-heart"></div></div>
+                </div>
+                <div class="food-bar">
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                    <div class="shank-wrapper"><div class="pixel-shank"></div></div>
+                </div>
             </div>
+
+            <!-- Hotbar with Golden Apple in Slot 2 -->
             <div id="hotbar">
                 <div class="slot active" id="slot-1">🗡️</div>
-                <div class="slot" id="slot-2">🔮</div>
-                <div class="slot" id="slot-3">🗿</div>
+                <div class="slot" id="slot-2"><div class="pixel-gapple"></div></div>
+                <div class="slot" id="slot-3">🔮</div>
                 <div class="slot" id="slot-4">⬛</div>
             </div>
         </div>
+
         <div id="blocker">
             <div id="instructions">
                 <h1 style="color:#ff0055; margin-bottom:10px;">DONUT SMP ARENA</h1>
@@ -97,7 +157,7 @@
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-            // Lighting
+            // Lighting setup
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
             scene.add(ambientLight);
 
@@ -117,7 +177,7 @@
             controls.addEventListener('unlock', () => blocker.style.display = 'flex');
 
             scene.add(controls.getObject());
-            controls.getObject().position.set(0, 3, 0); // Center of arena
+            controls.getObject().position.set(0, 3, 0);
 
             buildColosseumArena();
             setupControls();
@@ -132,10 +192,10 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
+        // 3D Arena & Tower Builder
         function buildColosseumArena() {
             const boxGeo = new THREE.BoxGeometry(1, 1, 1);
             
-            // Materials
             const sandMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.9 });
             const stoneMat = new THREE.MeshStandardMaterial({ color: 0x707070, roughness: 0.8 });
             const darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x404040, roughness: 0.8 });
@@ -143,9 +203,9 @@
             const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.7 });
             const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57, roughness: 0.6 });
 
-            const radius = 35; // Ground arena radius
+            const radius = 35;
 
-            // 1. Solid Sand Arena Floor
+            // 1. Sand Arena Floor
             for (let x = -radius; x <= radius; x++) {
                 for (let z = -radius; z <= radius; z++) {
                     if (x * x + z * z <= radius * radius) {
@@ -156,7 +216,7 @@
                 }
             }
 
-            // Dense Ring Helper Function (Eliminates gaps/holes)
+            // Gapless Circle Ring Generator
             function createSolidRing(ringRadius, startY, height, material) {
                 const circumference = 2 * Math.PI * ringRadius;
                 const steps = Math.ceil(circumference * 1.5);
@@ -174,30 +234,26 @@
                 }
             }
 
-            // 2. Solid Lower Ring Wall
+            // 2. Outer Arena Wall & Tiered Seating Steps
             createSolidRing(radius + 1, 1, 4, darkStoneMat);
 
-            // 3. Solid Seating Tier Steps (No gaps)
             for (let tier = 0; tier < 8; tier++) {
                 const currentRadius = radius + 2 + tier;
                 const tierHeight = 4 + tier;
                 createSolidRing(currentRadius, tierHeight, 1, stoneMat);
                 
-                // Fill space beneath seating steps
                 for (let y = 1; y < tierHeight; y++) {
                     createSolidRing(currentRadius, y, 1, darkStoneMat);
                 }
             }
 
-            // 4. Pillars & Bush Decor
+            // 3. Columns, Pillars & Leaves
             const pillarRadius = radius + 10;
-            const pillarCount = 24;
-            for (let i = 0; i < pillarCount; i++) {
-                const angle = (i / pillarCount) * Math.PI * 2;
+            for (let i = 0; i < 24; i++) {
+                const angle = (i / 24) * Math.PI * 2;
                 const px = Math.cos(angle) * pillarRadius;
                 const pz = Math.sin(angle) * pillarRadius;
 
-                // Pillars
                 for (let ph = 0; ph < 8; ph++) {
                     const pillar = new THREE.Mesh(boxGeo, pillarMat);
                     pillar.position.set(px, 12 + ph, pz);
@@ -205,21 +261,17 @@
                     scene.add(pillar);
                 }
 
-                // Decorative Bushes
                 const bush = new THREE.Mesh(boxGeo, leafMat);
                 bush.position.set(px * 0.95, 12, pz * 0.95);
                 bush.scale.set(1.5, 1.5, 1.5);
                 scene.add(bush);
             }
 
-            // 5. Solid Upper Walkway Platform
-            const platformRadius = radius + 10;
-            createSolidRing(platformRadius - 1, 20, 1, stoneMat);
-            createSolidRing(platformRadius, 20, 1, stoneMat);
-            createSolidRing(platformRadius + 1, 20, 1, stoneMat);
-
-            // 6. Solid Top Roof Rim
-            createSolidRing(platformRadius, 21, 1, roofMat);
+            // 4. Upper Roof Walkway Ring
+            createSolidRing(pillarRadius - 1, 20, 1, stoneMat);
+            createSolidRing(pillarRadius, 20, 1, stoneMat);
+            createSolidRing(pillarRadius + 1, 20, 1, stoneMat);
+            createSolidRing(pillarRadius, 21, 1, roofMat);
         }
 
         function setupControls() {

@@ -1,532 +1,229 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Donut SMP Crystal PvP Arena</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-        }
-
-        body, html {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #000;
-            font-family: 'Courier New', Courier, monospace;
-        }
-
-        #game-container {
-            width: 100vw;
-            height: 100vh;
-            position: relative;
-        }
-
-        #crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 16px;
-            height: 16px;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 5;
-        }
-
-        #crosshair::before, #crosshair::after {
-            content: '';
-            position: absolute;
-            background: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 0 2px #000;
-        }
-
-        #crosshair::before { left: 7px; top: 0; width: 2px; height: 16px; }
-        #crosshair::after { left: 0; top: 7px; width: 16px; height: 2px; }
-
-        #bottom-hud {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            pointer-events: none;
-            z-index: 5;
-        }
-
-        #status-bars {
-            display: flex;
-            justify-content: space-between;
-            width: 360px;
-            margin-bottom: 8px;
-            color: #fff;
-            font-weight: bold;
-            font-size: 18px;
-            text-shadow: 2px 2px #000;
-        }
-
-        #hotbar {
-            display: flex;
-            background: rgba(0, 0, 0, 0.6);
-            border: 4px solid #3c3c3c;
-            border-radius: 4px;
-        }
-
-        .slot {
-            width: 48px;
-            height: 48px;
-            border: 3px solid #8b8b8b;
-            background: rgba(139, 139, 139, 0.3);
-            margin: 2px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #fff;
-            font-size: 20px;
-        }
-
-        .slot.active {
-            border-color: #ffffff;
-            background: rgba(255, 255, 255, 0.5);
-            box-shadow: inset 0 0 5px #fff;
-        }
-
-        #inventory-gui {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 440px;
-            background-color: #c6c6c6;
-            border: 4px solid #373737;
-            display: none;
-            flex-direction: column;
-            padding: 16px;
-            z-index: 20;
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.95);
-        }
-
-        .inv-title {
-            color: #373737;
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 8px;
-        }
-
-        .inv-grid {
-            display: grid;
-            grid-template-columns: repeat(9, 1fr);
-            gap: 4px;
-            margin-bottom: 12px;
-        }
-
-        .inv-slot {
-            width: 40px;
-            height: 40px;
-            background-color: #8b8b8b;
-            border: 2px solid #373737;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 20px;
-            position: relative;
-        }
-
-        .item-count {
-            position: absolute;
-            bottom: 1px;
-            right: 2px;
-            font-size: 11px;
-            color: #fff;
-            font-weight: bold;
-            text-shadow: 1px 1px #000;
-        }
-
-        #blocker {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.85);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: #fff;
-            z-index: 10;
-            cursor: pointer;
-        }
-
-        #instructions {
-            text-align: center;
-            padding: 25px;
-            background: rgba(20, 20, 20, 0.95);
-            border: 3px solid #ff0055;
-            box-shadow: 0 0 25px #ff0055;
-        }
-    </style>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minecraft 3D Voxel Arena</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+      user-select: none;
+    }
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      margin-top: -5px;
+      margin-left: -5px;
+      pointer-events: none;
+    }
+    #crosshair::before, #crosshair::after {
+      content: '';
+      position: absolute;
+      background: white;
+    }
+    #crosshair::before { top: 4px; left: 0; width: 10px; height: 2px; }
+    #crosshair::after { top: 0; left: 4px; width: 2px; height: 10px; }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      text-shadow: 1px 1px 2px black;
+      font-size: 14px;
+    }
+    #instructions {
+      position: absolute;
+      top: 50%;
+      width: 100%;
+      text-align: center;
+      color: white;
+      font-size: 24px;
+      text-shadow: 2px 2px 4px black;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
+  <div id="crosshair"></div>
+  <div id="ui">
+    <b>Controls:</b> WASD = Move | SPACE = Jump | Left Click = Break | Right Click = Place
+  </div>
+  <div id="instructions">Click Anywhere to Play</div>
 
-    <div id="game-container">
-        <div id="crosshair"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // Scene & Renderer Setup
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
 
-        <div id="bottom-hud">
-            <div id="status-bars">
-                <span>❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️</span>
-                <span>🍗🍗🍗🍗🍗🍗🍗🍗🍗🍗</span>
-            </div>
-            <div id="hotbar">
-                <div class="slot active" id="slot-1">🗡️</div>
-                <div class="slot" id="slot-2">🔮</div>
-                <div class="slot" id="slot-3">🗿</div>
-                <div class="slot" id="slot-4">⬛</div>
-            </div>
-        </div>
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-        <div id="inventory-gui">
-            <div class="inv-title">Equipped Netherite Armor & Totems</div>
-            <div class="inv-grid">
-                <div class="inv-slot">🪖<span class="item-count">1</span></div>
-                <div class="inv-slot">👕<span class="item-count">1</span></div>
-                <div class="inv-slot">👖<span class="item-count">1</span></div>
-                <div class="inv-slot">🥾<span class="item-count">1</span></div>
-                <div class="inv-slot">🗿<span class="item-count">64</span></div>
-                <div class="inv-slot">🗿<span class="item-count">64</span></div>
-                <div class="inv-slot">🗿<span class="item-count">64</span></div>
-                <div class="inv-slot">🗡️<span class="item-count">1</span></div>
-                <div class="inv-slot">🍎<span class="item-count">64</span></div>
-            </div>
-            <div class="inv-title">Inventory Storage</div>
-            <div class="inv-grid">
-                <div class="inv-slot">🗿<span class="item-count">64</span></div>
-                <div class="inv-slot">🗿<span class="item-count">64</span></div>
-                <div class="inv-slot">🗿<span class="item-count">64</span></div>
-                <div class="inv-slot">🗿<span class="item-count">64</span></div>
-                <div class="inv-slot">🔮<span class="item-count">64</span></div>
-                <div class="inv-slot">⬛<span class="item-count">64</span></div>
-                <div class="inv-slot">⬛<span class="item-count">64</span></div>
-                <div class="inv-slot">🍎<span class="item-count">64</span></div>
-                <div class="inv-slot">🍎<span class="item-count">64</span></div>
-            </div>
-        </div>
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight.position.set(20, 40, 20);
+    scene.add(dirLight);
 
-        <div id="blocker">
-            <div id="instructions">
-                <h1 style="color:#ff0055; margin-bottom:10px;">DONUT SMP CRYSTAL PVP</h1>
-                <p style="color:#ffaa00; font-weight:bold; margin-bottom:15px;">Click Screen to Play!</p>
-                <p><b>WASD</b> : Walk | <b>SPACE</b> : Jump</p>
-                <p><b>E</b> : Open Netherite & Totem Inventory</p>
-                <p><b>RIGHT CLICK (Slot 4)</b> : Place Obsidian</p>
-                <p><b>RIGHT CLICK (Slot 2)</b> : Place 3D End Crystal & Explode</p>
-            </div>
-        </div>
-    </div>
+    // World Building
+    const blockSize = 1;
+    const arenaSize = 16;
+    const blocks = new Map();
+    const boxGeo = new THREE.BoxGeometry(blockSize, blockSize, blockSize);
 
-    <script>
-        let scene, camera, renderer, controls;
-        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
-        let canJump = false;
-        let isInventoryOpen = false;
+    const grassMat = new THREE.MeshLambertMaterial({ color: 0x557a2b });
+    const wallMat = new THREE.MeshLambertMaterial({ color: 0x777777 });
 
-        const velocity = new THREE.Vector3();
-        let prevTime = performance.now();
+    function getPosKey(x, y, z) {
+      return `${Math.round(x)},${Math.round(y)},${Math.round(z)}`;
+    }
 
-        let proBotGroup, botHealth = 100;
-        let activeSlot = 1;
-        const placedObjects = [];
-        const activeCrystals = [];
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2(0, 0);
+    function addBlock(x, y, z, material) {
+      const mesh = new THREE.Mesh(boxGeo, material);
+      mesh.position.set(x, y, z);
+      scene.add(mesh);
+      blocks.set(getPosKey(x, y, z), mesh);
+    }
 
-        function init() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x111115); // Dark Cave Arena
-            scene.fog = new THREE.FogExp2(0x111115, 0.02);
-
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-
-            const ambient = new THREE.AmbientLight(0xffffff, 0.4);
-            scene.add(ambient);
-
-            const pointLight = new THREE.PointLight(0xff00ff, 1.5, 30);
-            pointLight.position.set(12, 10, 12);
-            scene.add(pointLight);
-
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            document.getElementById('game-container').appendChild(renderer.domElement);
-
-            controls = new THREE.PointerLockControls(camera, document.body);
-
-            const blocker = document.getElementById('blocker');
-            blocker.addEventListener('click', () => {
-                if(!isInventoryOpen) controls.lock();
-            });
-
-            controls.addEventListener('lock', () => blocker.style.display = 'none');
-            controls.addEventListener('unlock', () => {
-                if(!isInventoryOpen) blocker.style.display = 'flex';
-            });
-
-            scene.add(controls.getObject());
-            controls.getObject().position.set(12, 2, 18);
-
-            buildCaveArena();
-            createProNetheriteBot();
-            setupControls();
-
-            window.addEventListener('resize', onWindowResize);
-
-            animate();
+    // Generate Arena Floor & Walls
+    for (let x = -arenaSize; x <= arenaSize; x++) {
+      for (let z = -arenaSize; z <= arenaSize; z++) {
+        addBlock(x, 0, z, grassMat);
+        if (Math.abs(x) === arenaSize || Math.abs(z) === arenaSize) {
+          for (let y = 1; y <= 4; y++) {
+            addBlock(x, y, z, wallMat);
+          }
         }
+      }
+    }
 
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
+    // Player Physics & Controls
+    const player = {
+      pos: new THREE.Vector3(0, 2, 0),
+      vel: new THREE.Vector3(),
+      onGround: false,
+      speed: 0.12,
+      gravity: -0.008,
+      jump: 0.18
+    };
 
-        // Cave Arena with Bedrock & Stone Walls
-        function buildCaveArena() {
-            const stoneMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.9 });
-            const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+    const keys = {};
+    window.addEventListener('keydown', e => keys[e.code] = true);
+    window.addEventListener('keyup', e => keys[e.code] = false);
 
-            for (let x = 0; x < 24; x++) {
-                for (let z = 0; z < 24; z++) {
-                    const block = new THREE.Mesh(boxGeo, stoneMat);
-                    block.position.set(x, 0, z);
-                    scene.add(block);
-                    placedObjects.push(block);
-                }
+    // Pointer Lock Camera Controls
+    const instructions = document.getElementById('instructions');
+    let isLocked = false;
+
+    instructions.addEventListener('click', () => {
+      document.body.requestPointerLock();
+    });
+
+    document.addEventListener('pointerlockchange', () => {
+      isLocked = document.pointerLockElement === document.body;
+      instructions.style.display = isLocked ? 'none' : 'block';
+    });
+
+    let yaw = 0, pitch = 0;
+    document.addEventListener('mousemove', e => {
+      if (!isLocked) return;
+      yaw -= e.movementX * 0.002;
+      pitch -= e.movementY * 0.002;
+      pitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, pitch));
+    });
+
+    // Raycasting for Block Placement & Breaking
+    const raycaster = new THREE.Raycaster();
+    const mouseCenter = new THREE.Vector2(0, 0);
+
+    window.addEventListener('mousedown', e => {
+      if (!isLocked) return;
+      raycaster.setFromCamera(mouseCenter, camera);
+      const intersects = raycaster.intersectObjects(Array.from(blocks.values()));
+
+      if (intersects.length > 0) {
+        const hit = intersects[0];
+        if (e.button === 0) { // Left Click: Break Block
+          scene.remove(hit.object);
+          for (let [key, val] of blocks.entries()) {
+            if (val === hit.object) {
+              blocks.delete(key);
+              break;
             }
+          }
+        } else if (e.button === 2) { // Right Click: Place Block
+          const p = hit.point.clone().add(hit.face.normal.clone().multiplyScalar(0.5));
+          const nx = Math.round(p.x);
+          const ny = Math.round(p.y);
+          const nz = Math.round(p.z);
+          if (!blocks.has(getPosKey(nx, ny, nz))) {
+            addBlock(nx, ny, nz, grassMat);
+          }
+        }
+      }
+    });
+
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Game Loop
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (isLocked) {
+        // Rotation
+        camera.rotation.order = 'YXZ';
+        camera.rotation.y = yaw;
+        camera.rotation.x = pitch;
+
+        // Movement Vectors
+        const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+        const side = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+
+        let moveX = 0, moveZ = 0;
+        if (keys['KeyW']) { moveX += forward.x; moveZ += forward.z; }
+        if (keys['KeyS']) { moveX -= forward.x; moveZ -= forward.z; }
+        if (keys['KeyD']) { moveX += side.x; moveZ += side.z; }
+        if (keys['KeyA']) { moveX -= side.x; moveZ -= side.z; }
+
+        player.pos.x += moveX * player.speed;
+        player.pos.z += moveZ * player.speed;
+
+        // Gravity & Ground Collision
+        player.vel.y += player.gravity;
+        player.pos.y += player.vel.y;
+
+        if (player.pos.y <= 1.8) {
+          player.pos.y = 1.8;
+          player.vel.y = 0;
+          player.onGround = true;
         }
 
-        function createProNetheriteBot() {
-            proBotGroup = new THREE.Group();
-            const netheriteMat = new THREE.MeshStandardMaterial({ color: 0x1d1a21, roughness: 0.2, metalness: 0.8 });
-            const purpleEyeMat = new THREE.MeshBasicMaterial({ color: 0xcc00ff });
-
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.3), netheriteMat);
-            body.position.y = 0.9;
-            proBotGroup.add(body);
-
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.45, 0.45), netheriteMat);
-            head.position.y = 1.55;
-            proBotGroup.add(head);
-
-            const eye = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.08, 0.1), purpleEyeMat);
-            eye.position.set(0, 1.55, -0.2);
-            proBotGroup.add(eye);
-
-            proBotGroup.position.set(12, 0.5, 6);
-            scene.add(proBotGroup);
+        if (keys['Space'] && player.onGround) {
+          player.vel.y = player.jump;
+          player.onGround = false;
         }
 
-        function setupControls() {
-            document.addEventListener('keydown', (e) => {
-                if (e.code === 'KeyE') {
-                    toggleInventory();
-                    return;
-                }
+        camera.position.copy(player.pos);
+      }
 
-                if (isInventoryOpen) return;
+      renderer.render(scene, camera);
+    }
 
-                switch (e.code) {
-                    case 'KeyW': moveForward = true; break;
-                    case 'KeyS': moveBackward = true; break;
-                    case 'KeyA': moveLeft = true; break;
-                    case 'KeyD': moveRight = true; break;
-                    case 'Space': 
-                        if (canJump) {
-                            velocity.y += 12.0;
-                            canJump = false;
-                        }
-                        break;
-                    case 'Digit1': selectSlot(1); break;
-                    case 'Digit2': selectSlot(2); break;
-                    case 'Digit3': selectSlot(3); break;
-                    case 'Digit4': selectSlot(4); break;
-                }
-            });
+    animate();
 
-            document.addEventListener('keyup', (e) => {
-                switch (e.code) {
-                    case 'KeyW': moveForward = false; break;
-                    case 'KeyS': moveBackward = false; break;
-                    case 'KeyA': moveLeft = false; break;
-                    case 'KeyD': moveRight = false; break;
-                }
-            });
-
-            document.addEventListener('mousedown', (e) => {
-                if (!controls.isLocked || isInventoryOpen) return;
-                if (e.button === 0) handleLeftClick();
-                if (e.button === 2) handleRightClick();
-            });
-
-            document.addEventListener('contextmenu', e => e.preventDefault());
-        }
-
-        function toggleInventory() {
-            const inv = document.getElementById('inventory-gui');
-            const blocker = document.getElementById('blocker');
-            isInventoryOpen = !isInventoryOpen;
-
-            if (isInventoryOpen) {
-                inv.style.display = 'flex';
-                blocker.style.display = 'none';
-                controls.unlock();
-            } else {
-                inv.style.display = 'none';
-                controls.lock();
-            }
-        }
-
-        function selectSlot(slot) {
-            activeSlot = slot;
-            document.querySelectorAll('.slot').forEach((el, idx) => {
-                if (idx + 1 === slot) el.classList.add('active');
-                else el.classList.remove('active');
-            });
-        }
-
-        function handleRightClick() {
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(placedObjects);
-
-            if (intersects.length > 0) {
-                const hit = intersects[0];
-                const normal = hit.face.normal;
-                const pos = hit.object.position.clone().add(normal);
-
-                if (activeSlot === 4) { // Obsidian
-                    const obsMat = new THREE.MeshStandardMaterial({ color: 0x110b1a, roughness: 0.4 });
-                    const obs = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), obsMat);
-                    obs.position.copy(pos);
-                    scene.add(obs);
-                    placedObjects.push(obs);
-                }
-
-                if (activeSlot === 2) { // 3D End Crystal
-                    spawn3DEndCrystal(pos);
-                }
-            }
-        }
-
-        // Create 3D End Crystal Model with Glass & Purple Core
-        function spawn3DEndCrystal(pos) {
-            const crystalGroup = new THREE.Group();
-
-            const glassMat = new THREE.MeshStandardMaterial({ 
-                color: 0xffffff, 
-                transparent: true, 
-                opacity: 0.6, 
-                roughness: 0.1 
-            });
-            const coreMat = new THREE.MeshBasicMaterial({ color: 0xff00ff });
-
-            const outerCube = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), glassMat);
-            const innerCore = new THREE.Mesh(new THREE.OctahedronGeometry(0.3), coreMat);
-
-            crystalGroup.add(outerCube);
-            crystalGroup.add(innerCore);
-            crystalGroup.position.copy(pos).add(new THREE.Vector3(0, 0.5, 0));
-
-            scene.add(crystalGroup);
-            activeCrystals.push(crystalGroup);
-            placedObjects.push(outerCube);
-        }
-
-        function handleLeftClick() {
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(scene.children, true);
-
-            if (intersects.length > 0) {
-                const target = intersects[0].object;
-
-                // Explode End Crystal on hit
-                activeCrystals.forEach((crystal, index) => {
-                    if (crystal.children.includes(target)) {
-                        triggerCrystalExplosion(crystal.position);
-                        scene.remove(crystal);
-                        activeCrystals.splice(index, 1);
-                    }
-                });
-            }
-        }
-
-        function triggerCrystalExplosion(position) {
-            const flashMat = new THREE.MeshBasicMaterial({ color: 0xff5500 });
-            const explosion = new THREE.Mesh(new THREE.SphereGeometry(3.0, 16, 16), flashMat);
-            explosion.position.copy(position);
-            scene.add(explosion);
-
-            setTimeout(() => scene.remove(explosion), 150);
-
-            if (proBotGroup && proBotGroup.position.distanceTo(position) < 5) {
-                botHealth -= 45;
-                proBotGroup.position.y += 2.0;
-                if (botHealth <= 0) scene.remove(proBotGroup);
-            }
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-
-            const time = performance.now();
-            const delta = (time - prevTime) / 1000;
-
-            // Spin 3D End Crystals
-            activeCrystals.forEach(crystal => {
-                crystal.rotation.y += 0.05;
-                crystal.children[0].rotation.x += 0.02;
-            });
-
-            if (controls.isLocked && !isInventoryOpen) {
-                velocity.x -= velocity.x * 10.0 * delta;
-                velocity.z -= velocity.z * 10.0 * delta;
-                velocity.y -= 9.8 * 25.0 * delta;
-
-                const dirZ = Number(moveForward) - Number(moveBackward);
-                const dirX = Number(moveRight) - Number(moveLeft);
-
-                if (moveForward || moveBackward) velocity.z -= dirZ * 60.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= dirX * 60.0 * delta;
-
-                controls.moveRight(-velocity.x * delta);
-                controls.moveForward(-velocity.z * delta);
-                controls.getObject().position.y += (velocity.y * delta);
-
-                if (controls.getObject().position.y < 1.8) {
-                    velocity.y = 0;
-                    controls.getObject().position.y = 1.8;
-                    canJump = true;
-                }
-
-                if (proBotGroup && botHealth > 0) {
-                    const playerPos = controls.getObject().position;
-                    proBotGroup.lookAt(playerPos.x, proBotGroup.position.y, playerPos.z);
-                    const dist = proBotGroup.position.distanceTo(playerPos);
-                    if (dist > 2.0) {
-                        proBotGroup.translateZ(3.2 * delta);
-                    }
-                }
-            }
-
-            prevTime = time;
-            renderer.render(scene, camera);
-        }
-
-        init();
-    </script>
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
 </body>
 </html>

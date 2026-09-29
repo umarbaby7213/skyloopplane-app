@@ -166,7 +166,7 @@
                     <div class="slot" id="slot-2" onclick="selectSlot(2)"><span class="slot-num">2</span><div class="pixel-gapple"></div><span class="count-badge" id="gapple-count">64</span></div>
                     <div class="slot" id="slot-3" onclick="selectSlot(3)"><span class="slot-num">3</span>🔮<span class="count-badge" id="crystal-count">64</span></div>
                     <div class="slot" id="slot-4" onclick="selectSlot(4)"><span class="slot-num">4</span>⬛<span class="count-badge" id="obsidian-count">64</span></div>
-                    <div class="slot" id="slot-5" onclick="selectSlot(5)"><span class="slot-num">5</span>🗿<span class="count-badge" id="totem-count">1</span></div>
+                    <div class="slot" id="slot-5" onclick="selectSlot(5)"><span class="slot-num">5</span>🗿<span class="count-badge" id="totem-count">64</span></div>
                 </div>
             </div>
         </div>
@@ -212,13 +212,19 @@
         const maxHealth = 10;
         let textTimeout = null;
 
-        let counts = { gapple: 64, crystal: 64, obsidian: 64, totem: 1 };
+        // Both player & bot start with 64 Totems
+        let counts = { gapple: 64, crystal: 64, obsidian: 64, totem: 64 };
 
         // Game Mode & Multiplayer
         let gameMode = 'none'; // 'ai' or 'mp'
         let peer, peerConn;
         let remotePlayerMesh = null;
+        
+        // AI Steve State
         let aiSteveMesh = null, aiSteveTimer = 0;
+        let aiSteveHealth = 10;
+        let aiSteveTotems = 64;
+        let aiSteveHealthBarMesh = null;
 
         // Held Item Meshes
         let swordMesh, heldTotemMesh;
@@ -347,7 +353,7 @@
             }
         }
 
-        /* --- AI Steve Bot Implementation --- */
+        /* --- AI Steve Bot Implementation & Overhead Health Bar --- */
         function createStevePlayerMesh(color = 0x00aaff) {
             const steveGroup = new THREE.Group();
             const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.8, 8);
@@ -365,15 +371,84 @@
             return steveGroup;
         }
 
+        function createOverheadHealthBar() {
+            const barGroup = new THREE.Group();
+            
+            const bgGeo = new THREE.PlaneGeometry(1.4, 0.2);
+            const bgMat = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide });
+            const bg = new THREE.Mesh(bgGeo, bgMat);
+            barGroup.add(bg);
+
+            const fgGeo = new THREE.PlaneGeometry(1.36, 0.16);
+            const fgMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
+            const fg = new THREE.Mesh(fgGeo, fgMat);
+            fg.position.z = 0.01;
+            barGroup.add(fg);
+
+            barGroup.userData = { fgMesh: fg };
+            return barGroup;
+        }
+
         function spawnAISteve() {
             aiSteveMesh = createStevePlayerMesh(0x00ffaa);
             aiSteveMesh.position.set(10, 0.5, 10);
+            aiSteveMesh.name = "ai_steve";
+
+            aiSteveHealthBarMesh = createOverheadHealthBar();
+            aiSteveHealthBarMesh.position.set(0, 2.6, 0);
+            aiSteveMesh.add(aiSteveHealthBarMesh);
+
             scene.add(aiSteveMesh);
-            showActionText("AI Steve Bot Joined the Battle!");
+            showActionText("AI Steve Bot Joined (64 Totems)!");
+        }
+
+        function updateSteveHealthBarUI() {
+            if (!aiSteveHealthBarMesh) return;
+            const fg = aiSteveHealthBarMesh.userData.fgMesh;
+            const healthPct = Math.max(0, aiSteveHealth / maxHealth);
+            fg.scale.x = healthPct;
+            fg.position.x = (healthPct - 1) * 0.68; // Align bar to left
+
+            if (healthPct > 0.5) fg.material.color.setHex(0x00ff00);
+            else if (healthPct > 0.25) fg.material.color.setHex(0xffaa00);
+            else fg.material.color.setHex(0xff0000);
+        }
+
+        function damageAISteve(amount) {
+            if (!aiSteveMesh) return;
+            aiSteveHealth -= amount;
+
+            if (aiSteveHealth <= 0) {
+                if (aiSteveTotems > 0) {
+                    aiSteveTotems--;
+                    aiSteveHealth = maxHealth;
+                    playSound('totem');
+                    showActionText(`AI STEVE POPPED A TOTEM! (${aiSteveTotems} left)`);
+                } else {
+                    playSound('explode');
+                    showActionText("YOU KILLED AI STEVE!");
+                    scene.remove(aiSteveMesh);
+                    aiSteveMesh = null;
+
+                    // Respawn AI Steve after 3 seconds
+                    setTimeout(() => {
+                        if (gameMode === 'ai') {
+                            aiSteveTotems = 64;
+                            aiSteveHealth = maxHealth;
+                            spawnAISteve();
+                        }
+                    }, 3000);
+                    return;
+                }
+            }
+            updateSteveHealthBarUI();
         }
 
         function updateAISteveLogic(delta) {
             if (!aiSteveMesh) return;
+
+            // Make health bar always face camera
+            if (aiSteveHealthBarMesh) aiSteveHealthBarMesh.lookAt(camera.position);
 
             const playerPos = camera.position;
             const dist = aiSteveMesh.position.distanceTo(playerPos);
@@ -418,7 +493,6 @@
             });
 
             peer.on('error', (err) => {
-                // If Host ID exists, connect as Client to the host
                 peer = new Peer(joinPeerID);
                 peer.on('open', () => {
                     peerConn = peer.connect(myPeerID);
@@ -803,6 +877,7 @@
 
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
+            // Detonate Crystal
             const crystalHits = raycaster.intersectObjects(endCrystals, true);
             if (crystalHits.length > 0) {
                 let hitObj = crystalHits[0].object;
@@ -811,6 +886,16 @@
                 return;
             }
 
+            // Direct Sword Attack on AI Steve
+            if (aiSteveMesh) {
+                const steveHits = raycaster.intersectObjects(aiSteveMesh.children, true);
+                if (steveHits.length > 0) {
+                    damageAISteve(3);
+                    return;
+                }
+            }
+
+            // Target Dummies
             const dummyHits = raycaster.intersectObjects(dummyTargets.map(d => d.children[0]), true);
             if (dummyHits.length > 0) {
                 const dummy = dummyHits[0].object.parent;
@@ -898,15 +983,25 @@
             flash.style.background = 'rgba(255, 255, 255, 0.6)';
             setTimeout(() => { flash.style.background = 'rgba(255, 255, 255, 0)'; }, 60);
 
-            const dist = camera.position.distanceTo(explosionPos);
-            if (dist < 6.0) {
-                const damage = Math.round((1 - dist / 6.0) * 8);
+            // Damage player if in blast radius
+            const playerDist = camera.position.distanceTo(explosionPos);
+            if (playerDist < 6.0) {
+                const damage = Math.round((1 - playerDist / 6.0) * 8);
                 takeDamage(damage);
 
                 const knockbackDir = camera.position.clone().sub(explosionPos).normalize();
                 velocity.x += knockbackDir.x * 12.0;
                 velocity.y += Math.max(3.0, knockbackDir.y * 10.0);
                 velocity.z += knockbackDir.z * 12.0;
+            }
+
+            // Damage AI Steve if in blast radius
+            if (aiSteveMesh) {
+                const botDist = aiSteveMesh.position.distanceTo(explosionPos);
+                if (botDist < 6.0) {
+                    const botDamage = Math.round((1 - botDist / 6.0) * 8);
+                    damageAISteve(botDamage);
+                }
             }
         }
 
@@ -961,7 +1056,7 @@
             totemOverlay.classList.add('active');
             setTimeout(() => { totemOverlay.classList.remove('active'); }, 1000);
 
-            showActionText("TOTEM POPPED! Saved from Death!");
+            showActionText(`TOTEM POPPED! (${counts.totem} Left)`);
         }
 
         function updateHeartsUI() {
